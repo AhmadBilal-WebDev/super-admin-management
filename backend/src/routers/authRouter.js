@@ -9,6 +9,9 @@ import getSidebarButtons from "../controllers/auth/getSidebarButtons.js";
 import createRole from "../controllers/role/createRole.js";
 import verifyInviteEmail from "../controllers/role/verifyInviteEmail.js";
 import setInvitePassword from "../controllers/role/setInvitePassword.js";
+import updateProfile from "../controllers/auth/updateProfile.js";
+import updatePassword from "../controllers/auth/updatePassword.js";
+import removeProfilePitcher from "../controllers/auth/removeProfilePitcher.js";
 
 const router = express.Router();
 
@@ -22,11 +25,25 @@ router.post("/superadmin/create-role", authMiddleware, createRole);
 router.post("/superadmin/verify-invite-email", verifyInviteEmail);
 router.post("/superadmin/set-invite-password", setInvitePassword);
 
+router.put(
+    "/superadmin/update-profile",
+    authMiddleware,
+    upload.single("profilePitcher"),
+    updateProfile
+);
+router.put("/superadmin/update-password", authMiddleware, updatePassword);
+
 router.post(
     "/superadmin/upload-profilepitcher",
     authMiddleware,
     upload.single("profilePitcher"),
     uploadProfilePitcher
+);
+
+router.delete(
+    "/superadmin/remove-profilepitcher",
+    authMiddleware,
+    removeProfilePitcher
 );
 
 export default router;
