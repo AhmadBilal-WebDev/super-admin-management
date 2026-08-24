@@ -10,7 +10,12 @@ const transporter = nodemailer.createTransport({
     },
 });
 
-const getOtpEmailTemplate = (otp, name = "Super Admin") => `
+const getOtpEmailTemplate = ({
+    otp,
+    name = "Super Admin",
+    subtitle = "Password Reset Verification",
+    message = "Use the 6-digit OTP below to reset your Super Admin password. This code is valid for <strong>5 minutes</strong>.",
+}) => `
 <!DOCTYPE html>
 <html>
 <head>
@@ -26,14 +31,14 @@ const getOtpEmailTemplate = (otp, name = "Super Admin") => `
           <tr>
             <td style="background:linear-gradient(135deg,#1e3a8a,#2563eb);padding:28px 32px;text-align:center;">
               <h1 style="margin:0;color:#ffffff;font-size:24px;letter-spacing:0.4px;">Super Admin Management</h1>
-              <p style="margin:8px 0 0;color:#dbeafe;font-size:14px;">Password Reset Verification</p>
+              <p style="margin:8px 0 0;color:#dbeafe;font-size:14px;">${subtitle}</p>
             </td>
           </tr>
           <tr>
             <td style="padding:32px;">
               <p style="margin:0 0 12px;color:#0f172a;font-size:16px;">Hello ${name},</p>
               <p style="margin:0 0 24px;color:#475569;font-size:15px;line-height:1.6;">
-                Use the 6-digit OTP below to reset your Super Admin password. This code is valid for <strong>5 minutes</strong>.
+                ${message}
               </p>
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
@@ -45,7 +50,7 @@ const getOtpEmailTemplate = (otp, name = "Super Admin") => `
                 </tr>
               </table>
               <p style="margin:0 0 8px;color:#64748b;font-size:13px;line-height:1.6;">
-                If you did not request a password reset, you can safely ignore this email.
+                If you did not expect this email, you can safely ignore it.
               </p>
             </td>
           </tr>
@@ -62,12 +67,19 @@ const getOtpEmailTemplate = (otp, name = "Super Admin") => `
 </html>
 `;
 
-const sendOtpEmail = async ({ to, otp, name }) => {
+const sendOtpEmail = async ({
+    to,
+    otp,
+    name,
+    subject = "Super Admin Management - Password Reset OTP",
+    subtitle,
+    message,
+}) => {
     await transporter.sendMail({
         from: `"Super Admin Management" <${process.env.EMAIL_USER}>`,
         to,
-        subject: "Super Admin Management - Password Reset OTP",
-        html: getOtpEmailTemplate(otp, name),
+        subject,
+        html: getOtpEmailTemplate({ otp, name, subtitle, message }),
     });
 };
 
