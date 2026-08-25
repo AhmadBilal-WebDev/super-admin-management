@@ -7,6 +7,7 @@ import forgotPassword from "../controllers/auth/forgotPassword.js";
 import resetPassword from "../controllers/auth/resetPassword.js";
 import getSidebarButtons from "../controllers/auth/getSidebarButtons.js";
 import createRole from "../controllers/role/createRole.js";
+import updateRole from "../controllers/role/updateRole.js";
 import verifyInviteEmail from "../controllers/role/verifyInviteEmail.js";
 import setInvitePassword from "../controllers/role/setInvitePassword.js";
 import updateProfile from "../controllers/auth/updateProfile.js";
@@ -22,6 +23,7 @@ router.post("/superadmin/reset-password", resetPassword);
 
 router.get("/superadmin/sidebar-buttons", authMiddleware, getSidebarButtons);
 router.post("/superadmin/create-role", authMiddleware, createRole);
+router.put("/superadmin/update-role/:id", authMiddleware, updateRole);
 router.post("/superadmin/verify-invite-email", verifyInviteEmail);
 router.post("/superadmin/set-invite-password", setInvitePassword);
 

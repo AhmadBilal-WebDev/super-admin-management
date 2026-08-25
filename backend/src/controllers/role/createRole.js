@@ -1,40 +1,9 @@
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import LoginSuperAdmin from "../../models/auth/login.js";
-import { sidebarCatalog } from "../../constants/sidebarCatalog.js";
+import { normalizePermissions } from "../../constants/sidebarCatalog.js";
 import sendOtpEmail from "../../utils/sendOtpEmail.js";
 import getPublicUser from "../../utils/getPublicUser.js";
-
-const normalizePermissions = (permissions) => {
-    const catalogMap = new Map(sidebarCatalog.map((item) => [item.key, item]));
-
-    return permissions.map((item) => {
-        const catalogItem = catalogMap.get(item.key);
-
-        if (!catalogItem) {
-            throw new Error(`Invalid sidebar key: ${item.key}`);
-        }
-
-        const allowedButtons = Array.isArray(item.buttons) ? item.buttons : [];
-        const validButtonKeys = new Set(catalogItem.buttons.map((btn) => btn.key));
-
-        const buttons = allowedButtons.filter((btnKey) => {
-            if (!validButtonKeys.has(btnKey)) {
-                throw new Error(`Invalid button "${btnKey}" for sidebar "${item.key}"`);
-            }
-            return true;
-        });
-
-        if (buttons.length === 0) {
-            throw new Error(`Select at least one inner button for "${catalogItem.label}"`);
-        }
-
-        return {
-            key: catalogItem.key,
-            buttons,
-        };
-    });
-};
 
 const createRole = async (req, res) => {
     try {

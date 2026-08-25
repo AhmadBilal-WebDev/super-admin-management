@@ -67,4 +67,35 @@ const getAuthorizedSidebar = (user) => {
         .filter((item) => item.buttons.length > 0);
 };
 
-export { sidebarCatalog, getFullSidebar, getAuthorizedSidebar };
+const normalizePermissions = (permissions) => {
+    const catalogMap = new Map(sidebarCatalog.map((item) => [item.key, item]));
+
+    return permissions.map((item) => {
+        const catalogItem = catalogMap.get(item.key);
+
+        if (!catalogItem) {
+            throw new Error(`Invalid sidebar key: ${item.key}`);
+        }
+
+        const allowedButtons = Array.isArray(item.buttons) ? item.buttons : [];
+        const validButtonKeys = new Set(catalogItem.buttons.map((btn) => btn.key));
+
+        const buttons = allowedButtons.filter((btnKey) => {
+            if (!validButtonKeys.has(btnKey)) {
+                throw new Error(`Invalid button "${btnKey}" for sidebar "${item.key}"`);
+            }
+            return true;
+        });
+
+        if (buttons.length === 0) {
+            throw new Error(`Select at least one inner button for "${catalogItem.label}"`);
+        }
+
+        return {
+            key: catalogItem.key,
+            buttons,
+        };
+    });
+};
+
+export { sidebarCatalog, getFullSidebar, getAuthorizedSidebar, normalizePermissions };
