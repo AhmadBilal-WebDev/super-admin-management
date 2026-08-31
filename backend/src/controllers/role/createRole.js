@@ -4,6 +4,10 @@ import LoginSuperAdmin from "../../models/auth/login.js";
 import { normalizePermissions } from "../../constants/sidebarCatalog.js";
 import sendOtpEmail from "../../utils/sendOtpEmail.js";
 import getPublicUser from "../../utils/getPublicUser.js";
+import {
+    INVITE_OTP_EXPIRY_MS,
+    INVITE_OTP_VALIDITY_TEXT,
+} from "../../constants/otpExpiry.js";
 
 const createRole = async (req, res) => {
     try {
@@ -104,7 +108,7 @@ const createRole = async (req, res) => {
             isEmailVerified: false,
             isPasswordSet: false,
             otp: hashedOtp,
-            otpExpiresAt: new Date(Date.now() + 5 * 60 * 1000),
+            otpExpiresAt: new Date(Date.now() + INVITE_OTP_EXPIRY_MS),
         });
 
         await sendOtpEmail({
@@ -113,8 +117,7 @@ const createRole = async (req, res) => {
             name: newAdmin.firstName,
             subject: "Super Admin Management - Verify Your Email",
             subtitle: "Temporary Access Verification",
-            message:
-                "You have been invited with a new role. Use this temporary 6-digit OTP to verify your email. After verification you can set your new password and then login. This code is valid for <strong>5 minutes</strong>.",
+            message: `You have been invited with a new role. Use this 6-digit OTP to verify your email in the app. After verification set your new password and login. This code is valid for <strong>${INVITE_OTP_VALIDITY_TEXT}</strong>.`,
         });
 
         return res.status(201).json({

@@ -13,6 +13,7 @@ import blockRole from "../controllers/role/blockRole.js";
 import activateRole from "../controllers/role/activateRole.js";
 import deleteRole from "../controllers/role/deleteRole.js";
 import verifyInviteEmail from "../controllers/role/verifyInviteEmail.js";
+import resendInviteOtp from "../controllers/role/resendInviteOtp.js";
 import setInvitePassword from "../controllers/role/setInvitePassword.js";
 import updateProfile from "../controllers/auth/updateProfile.js";
 import updatePassword from "../controllers/auth/updatePassword.js";
@@ -33,6 +34,8 @@ router.put("/superadmin/block-role/:id", authMiddleware, blockRole);
 router.put("/superadmin/activate-role/:id", authMiddleware, activateRole);
 router.delete("/superadmin/delete-role/:id", authMiddleware, deleteRole);
 router.post("/superadmin/verify-invite-email", verifyInviteEmail);
+router.post("/superadmin/resend-invite-otp/:id", authMiddleware, resendInviteOtp);
+router.post("/superadmin/resend-invite-otp", authMiddleware, resendInviteOtp);
 router.post("/superadmin/set-invite-password", setInvitePassword);
 
 router.put(

@@ -8,10 +8,10 @@ const login = async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        if (!email || !password) {
+        if (!email || !String(email).trim()) {
             return res.status(400).json({
                 success: false,
-                message: "Email and password are required",
+                message: "Email is required",
             });
         }
 
@@ -20,23 +20,75 @@ const login = async (req, res) => {
         });
 
         if (!user) {
-            return res.status(401).json({
+            return res.status(404).json({
                 success: false,
-                message: "Invalid email or password",
+                message: "No account found with this email",
             });
         }
 
         if (user.isActive === false) {
             return res.status(403).json({
                 success: false,
-                message: "Account is inactive. Contact Super Admin",
+                message: "Account is blocked. Contact Super Admin",
             });
         }
 
+        const baseUser = {
+            email: user.email,
+            firstName: user.firstName || "",
+            lastName: user.lastName || "",
+            accountType: user.accountType || "owner",
+        };
+
+        // Step 1: email only — tell frontend which screen to show next
+        if (!password) {
+            if (user.accountType === "role" && user.isEmailVerified === false) {
+                const isOtpExpired =
+                    !user.otpExpiresAt || user.otpExpiresAt.getTime() < Date.now();
+
+                return res.status(200).json({
+                    success: true,
+                    nextStep: "otp",
+                    passwordRequired: false,
+                    message: isOtpExpired
+                        ? "OTP expired. Ask Super Admin to resend OTP, then enter it"
+                        : "Enter the 6-digit OTP sent to your email",
+                    otpExpired: isOtpExpired,
+                    user: baseUser,
+                });
+            }
+
+            if (user.isEmailVerified === false) {
+                return res.status(403).json({
+                    success: false,
+                    message: "Please verify your email first",
+                });
+            }
+
+            if (user.isPasswordSet === false) {
+                return res.status(200).json({
+                    success: true,
+                    nextStep: "set-password",
+                    passwordRequired: false,
+                    message: "Email verified. Please set your new password",
+                    user: baseUser,
+                });
+            }
+
+            return res.status(200).json({
+                success: true,
+                nextStep: "password",
+                passwordRequired: true,
+                message: "Email verified. Password is required",
+                user: baseUser,
+            });
+        }
+
+        // Step 2: email + password — complete login
         if (user.isEmailVerified === false) {
             return res.status(403).json({
                 success: false,
-                message: "Please verify your email first",
+                message: "Please verify your email with OTP first",
             });
         }
 
@@ -52,16 +104,13 @@ const login = async (req, res) => {
         if (!isPasswordMatch) {
             return res.status(401).json({
                 success: false,
-                message: "Invalid email or password",
+                message: "Invalid password",
             });
         }
 
         user.tokenVersion = (user.tokenVersion || 0) + 1;
         if (user.gender) {
             user.gender = String(user.gender).toLowerCase();
-        }
-        if (user.isActive === undefined) {
-            user.isActive = true;
         }
         await user.save();
 
@@ -82,6 +131,7 @@ const login = async (req, res) => {
 
         return res.status(200).json({
             success: true,
+            nextStep: "dashboard",
             message: "Login successful",
             token,
             user: payload,

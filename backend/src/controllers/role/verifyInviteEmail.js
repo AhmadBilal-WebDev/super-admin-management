@@ -26,7 +26,7 @@ const verifyInviteEmail = async (req, res) => {
         if (user.otpExpiresAt.getTime() < Date.now()) {
             return res.status(400).json({
                 success: false,
-                message: "OTP has expired. Please ask Super Admin to create role again",
+                message: "OTP has expired. Please ask Super Admin to resend OTP",
             });
         }
 
@@ -44,7 +44,13 @@ const verifyInviteEmail = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            message: "Email verified successfully. You can now set your new password",
+            nextStep: "set-password",
+            message: "Email verified successfully. Now set your new password",
+            user: {
+                email: user.email,
+                firstName: user.firstName || "",
+                lastName: user.lastName || "",
+            },
         });
     } catch (error) {
         console.error("Verify invite email error:", error);
