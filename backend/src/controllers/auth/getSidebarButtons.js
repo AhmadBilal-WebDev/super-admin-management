@@ -1,8 +1,8 @@
-import { getAuthorizedSidebar } from "../../constants/sidebarCatalog.js";
+import { getSidebarForUser } from "../../constants/sidebarCatalog.js";
 
 const getSidebarButtons = async (req, res) => {
     try {
-        const sidebar = getAuthorizedSidebar(req.user);
+        const sidebar = await getSidebarForUser(req.user);
 
         return res.status(200).json({
             success: true,

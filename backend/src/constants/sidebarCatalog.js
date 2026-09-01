@@ -1,3 +1,5 @@
+import Bussiness from "../models/bussiness/bussiness.js";
+
 const sidebarCatalog = [
     {
         key: "dashboard",
@@ -9,12 +11,16 @@ const sidebarCatalog = [
         ],
     },
     {
-        key: "addbussiness",
-        label: "+ Add New Business",
+        key: "merchantdirectory",
+        label: "Merchant Directory",
         buttons: [
-            { key: "addbussiness", label: "Add New Business" },
-            { key: "allbussiness", label: "All Businesses" },
+            { key: "createbussiness", label: "Create Business" },
         ],
+    },
+    {
+        key: "viewbussiness",
+        label: "View All Businesses",
+        buttons: [],
     },
     {
         key: "roles",
@@ -37,34 +43,79 @@ const sidebarCatalog = [
     },
 ];
 
-const getFullSidebar = () =>
-    sidebarCatalog.map((item) => ({
-        key: item.key,
-        label: item.label,
-        buttons: item.buttons.map((btn) => ({ ...btn })),
+const VIEW_BUSSINESS_PERMISSION = "viewallbussiness";
+
+const toBusinessButtons = (businesses = []) =>
+    businesses.map((item) => ({
+        key: String(item._id),
+        slug: item.slug || "",
+        label: item.name,
+        description: item.description || "",
     }));
 
-const getAuthorizedSidebar = (user) => {
+const injectBusinessButtons = (sidebar, businesses = []) =>
+    sidebar.map((item) => {
+        if (item.key !== "viewbussiness") {
+            return item;
+        }
+
+        return {
+            ...item,
+            buttons: toBusinessButtons(businesses),
+        };
+    });
+
+const getFullSidebar = (businesses = []) =>
+    injectBusinessButtons(
+        sidebarCatalog.map((item) => ({
+            key: item.key,
+            label: item.label,
+            buttons: item.buttons.map((btn) => ({ ...btn })),
+        })),
+        businesses
+    );
+
+const getAuthorizedSidebar = (user, businesses = []) => {
     const allowed = user.allowedSidebar || [];
 
     if (!allowed.length) {
-        return getFullSidebar();
+        return getFullSidebar(businesses);
     }
 
     const allowedMap = new Map(
         allowed.map((item) => [item.key, new Set(item.buttons || [])])
     );
 
-    return sidebarCatalog
+    const sidebar = sidebarCatalog
         .filter((item) => allowedMap.has(item.key))
-        .map((item) => ({
-            key: item.key,
-            label: item.label,
-            buttons: item.buttons.filter((btn) =>
-                allowedMap.get(item.key).has(btn.key)
-            ),
-        }))
-        .filter((item) => item.buttons.length > 0);
+        .map((item) => {
+            if (item.key === "viewbussiness") {
+                return {
+                    key: item.key,
+                    label: item.label,
+                    buttons: [],
+                };
+            }
+
+            return {
+                key: item.key,
+                label: item.label,
+                buttons: item.buttons.filter((btn) =>
+                    allowedMap.get(item.key).has(btn.key)
+                ),
+            };
+        })
+        .filter((item) => item.key === "viewbussiness" || item.buttons.length > 0);
+
+    return injectBusinessButtons(sidebar, businesses);
+};
+
+const getSidebarForUser = async (user) => {
+    const businesses = await Bussiness.find({ isActive: { $ne: false } })
+        .select("name slug description")
+        .sort({ createdAt: -1 });
+
+    return getAuthorizedSidebar(user, businesses);
 };
 
 const normalizePermissions = (permissions) => {
@@ -75,6 +126,13 @@ const normalizePermissions = (permissions) => {
 
         if (!catalogItem) {
             throw new Error(`Invalid sidebar key: ${item.key}`);
+        }
+
+        if (item.key === "viewbussiness") {
+            return {
+                key: catalogItem.key,
+                buttons: [VIEW_BUSSINESS_PERMISSION],
+            };
         }
 
         const allowedButtons = Array.isArray(item.buttons) ? item.buttons : [];
@@ -98,4 +156,10 @@ const normalizePermissions = (permissions) => {
     });
 };
 
-export { sidebarCatalog, getFullSidebar, getAuthorizedSidebar, normalizePermissions };
+export {
+    sidebarCatalog,
+    getFullSidebar,
+    getAuthorizedSidebar,
+    getSidebarForUser,
+    normalizePermissions,
+};

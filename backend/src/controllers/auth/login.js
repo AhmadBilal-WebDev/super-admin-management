@@ -1,7 +1,7 @@
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import LoginSuperAdmin from "../../models/auth/login.js";
-import { getAuthorizedSidebar } from "../../constants/sidebarCatalog.js";
+import { getSidebarForUser } from "../../constants/sidebarCatalog.js";
 import getPublicUser from "../../utils/getPublicUser.js";
 
 const login = async (req, res) => {
@@ -135,7 +135,7 @@ const login = async (req, res) => {
             message: "Login successful",
             token,
             user: payload,
-            sidebar: getAuthorizedSidebar(user),
+            sidebar: await getSidebarForUser(user),
         });
     } catch (error) {
         console.error("Login error:", error);
