@@ -1,0 +1,25 @@
+const formatMerchant = (merchant) => ({
+    id: merchant._id,
+    bussinessId: merchant.bussinessId,
+    name: merchant.name,
+    slug: merchant.slug || "",
+    ownerFirstName: merchant.ownerFirstName,
+    ownerLastName: merchant.ownerLastName,
+    ownerEmail: merchant.ownerEmail,
+    frontendDomainUrl: merchant.frontendDomainUrl,
+    gender: merchant.gender,
+    countryCode: merchant.countryCode,
+    contactNumber: merchant.contactNumber,
+    headAddress: merchant.headAddress,
+    country: merchant.country,
+    province: merchant.province,
+    city: merchant.city,
+    district: merchant.district,
+    businessType: merchant.businessType,
+    isActive: merchant.isActive !== false,
+    createdBy: merchant.createdBy || null,
+    createdAt: merchant.createdAt,
+    updatedAt: merchant.updatedAt,
+});
+
+export default formatMerchant;

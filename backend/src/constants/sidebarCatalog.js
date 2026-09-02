@@ -1,4 +1,5 @@
 import Bussiness from "../models/bussiness/bussiness.js";
+import Merchant from "../models/bussiness/merchant.js";
 
 const sidebarCatalog = [
     {
@@ -45,15 +46,26 @@ const sidebarCatalog = [
 
 const VIEW_BUSSINESS_PERMISSION = "viewallbussiness";
 
-const toBusinessButtons = (businesses = []) =>
+const toMerchantButtons = (merchants = []) =>
+    merchants.map((item) => ({
+        key: String(item._id),
+        slug: item.slug || "",
+        label: item.name,
+        businessType: item.businessType || "",
+    }));
+
+const toBusinessButtons = (businesses = [], merchantsByBusiness = new Map()) =>
     businesses.map((item) => ({
         key: String(item._id),
         slug: item.slug || "",
         label: item.name,
         description: item.description || "",
+        buttons: toMerchantButtons(
+            merchantsByBusiness.get(String(item._id)) || []
+        ),
     }));
 
-const injectBusinessButtons = (sidebar, businesses = []) =>
+const injectBusinessButtons = (sidebar, businesses = [], merchantsByBusiness = new Map()) =>
     sidebar.map((item) => {
         if (item.key !== "viewbussiness") {
             return item;
@@ -61,25 +73,26 @@ const injectBusinessButtons = (sidebar, businesses = []) =>
 
         return {
             ...item,
-            buttons: toBusinessButtons(businesses),
+            buttons: toBusinessButtons(businesses, merchantsByBusiness),
         };
     });
 
-const getFullSidebar = (businesses = []) =>
+const getFullSidebar = (businesses = [], merchantsByBusiness = new Map()) =>
     injectBusinessButtons(
         sidebarCatalog.map((item) => ({
             key: item.key,
             label: item.label,
             buttons: item.buttons.map((btn) => ({ ...btn })),
         })),
-        businesses
+        businesses,
+        merchantsByBusiness
     );
 
-const getAuthorizedSidebar = (user, businesses = []) => {
+const getAuthorizedSidebar = (user, businesses = [], merchantsByBusiness = new Map()) => {
     const allowed = user.allowedSidebar || [];
 
     if (!allowed.length) {
-        return getFullSidebar(businesses);
+        return getFullSidebar(businesses, merchantsByBusiness);
     }
 
     const allowedMap = new Map(
@@ -107,7 +120,21 @@ const getAuthorizedSidebar = (user, businesses = []) => {
         })
         .filter((item) => item.key === "viewbussiness" || item.buttons.length > 0);
 
-    return injectBusinessButtons(sidebar, businesses);
+    return injectBusinessButtons(sidebar, businesses, merchantsByBusiness);
+};
+
+const groupMerchantsByBusiness = (merchants = []) => {
+    const merchantsByBusiness = new Map();
+
+    for (const merchant of merchants) {
+        const key = String(merchant.bussinessId);
+        if (!merchantsByBusiness.has(key)) {
+            merchantsByBusiness.set(key, []);
+        }
+        merchantsByBusiness.get(key).push(merchant);
+    }
+
+    return merchantsByBusiness;
 };
 
 const getSidebarForUser = async (user) => {
@@ -115,7 +142,13 @@ const getSidebarForUser = async (user) => {
         .select("name slug description")
         .sort({ createdAt: -1 });
 
-    return getAuthorizedSidebar(user, businesses);
+    const merchants = await Merchant.find({ isActive: { $ne: false } })
+        .select("name slug businessType bussinessId")
+        .sort({ createdAt: -1 });
+
+    const merchantsByBusiness = groupMerchantsByBusiness(merchants);
+
+    return getAuthorizedSidebar(user, businesses, merchantsByBusiness);
 };
 
 const normalizePermissions = (permissions) => {

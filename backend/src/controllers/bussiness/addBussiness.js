@@ -2,6 +2,7 @@ import Bussiness from "../../models/bussiness/bussiness.js";
 import formatBussiness from "../../utils/formatBussiness.js";
 import hasSidebarButton from "../../utils/hasSidebarButton.js";
 import toBussinessSlug from "../../utils/toBussinessSlug.js";
+import { getSidebarForUser } from "../../constants/sidebarCatalog.js";
 
 const addBussiness = async (req, res) => {
     try {
@@ -57,6 +58,7 @@ const addBussiness = async (req, res) => {
             success: true,
             message: "Business added successfully",
             bussiness: formatBussiness(bussiness),
+            sidebar: await getSidebarForUser(req.user),
         });
     } catch (error) {
         if (error?.code === 11000) {
