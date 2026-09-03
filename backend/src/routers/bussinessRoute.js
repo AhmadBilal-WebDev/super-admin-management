@@ -2,6 +2,7 @@ import express from "express";
 import authMiddleware from "../middlewares/authMiddleware.js";
 import addBussiness from "../controllers/bussiness/addBussiness.js";
 import addMerchant from "../controllers/bussiness/addMerchant.js";
+import addBranch from "../controllers/bussiness/addBranch.js";
 import getMerchantsByBussiness from "../controllers/bussiness/getMerchantsByBussiness.js";
 import updateMerchant from "../controllers/bussiness/updateMerchant.js";
 import deleteMerchant from "../controllers/bussiness/deleteMerchant.js";
@@ -15,6 +16,11 @@ router.post(
     "/superadmin/bussiness/:bussinessId/add-merchant",
     authMiddleware,
     addMerchant
+);
+router.post(
+    "/superadmin/bussiness/:bussinessId/merchant/:merchantId/add-branch",
+    authMiddleware,
+    addBranch
 );
 router.get(
     "/superadmin/bussiness/:bussinessId/merchants",

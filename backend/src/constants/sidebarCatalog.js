@@ -1,5 +1,6 @@
 import Bussiness from "../models/bussiness/bussiness.js";
 import Merchant from "../models/bussiness/merchant.js";
+import Branch from "../models/bussiness/branch.js";
 
 const sidebarCatalog = [
     {
@@ -46,26 +47,46 @@ const sidebarCatalog = [
 
 const VIEW_BUSSINESS_PERMISSION = "viewallbussiness";
 
-const toMerchantButtons = (merchants = []) =>
+const toBranchButtons = (branches = []) =>
+    branches.map((item) => ({
+        key: String(item._id),
+        slug: item.slug || "",
+        label: item.name,
+        branchCode: item.branchCode || "",
+        isActive: item.isActive !== false,
+    }));
+
+const toMerchantButtons = (merchants = [], branchesByMerchant = new Map()) =>
     merchants.map((item) => ({
         key: String(item._id),
         slug: item.slug || "",
         label: item.name,
         businessType: item.businessType || "",
+        buttons: toBranchButtons(branchesByMerchant.get(String(item._id)) || []),
     }));
 
-const toBusinessButtons = (businesses = [], merchantsByBusiness = new Map()) =>
+const toBusinessButtons = (
+    businesses = [],
+    merchantsByBusiness = new Map(),
+    branchesByMerchant = new Map()
+) =>
     businesses.map((item) => ({
         key: String(item._id),
         slug: item.slug || "",
         label: item.name,
         description: item.description || "",
         buttons: toMerchantButtons(
-            merchantsByBusiness.get(String(item._id)) || []
+            merchantsByBusiness.get(String(item._id)) || [],
+            branchesByMerchant
         ),
     }));
 
-const injectBusinessButtons = (sidebar, businesses = [], merchantsByBusiness = new Map()) =>
+const injectBusinessButtons = (
+    sidebar,
+    businesses = [],
+    merchantsByBusiness = new Map(),
+    branchesByMerchant = new Map()
+) =>
     sidebar.map((item) => {
         if (item.key !== "viewbussiness") {
             return item;
@@ -73,11 +94,19 @@ const injectBusinessButtons = (sidebar, businesses = [], merchantsByBusiness = n
 
         return {
             ...item,
-            buttons: toBusinessButtons(businesses, merchantsByBusiness),
+            buttons: toBusinessButtons(
+                businesses,
+                merchantsByBusiness,
+                branchesByMerchant
+            ),
         };
     });
 
-const getFullSidebar = (businesses = [], merchantsByBusiness = new Map()) =>
+const getFullSidebar = (
+    businesses = [],
+    merchantsByBusiness = new Map(),
+    branchesByMerchant = new Map()
+) =>
     injectBusinessButtons(
         sidebarCatalog.map((item) => ({
             key: item.key,
@@ -85,14 +114,20 @@ const getFullSidebar = (businesses = [], merchantsByBusiness = new Map()) =>
             buttons: item.buttons.map((btn) => ({ ...btn })),
         })),
         businesses,
-        merchantsByBusiness
+        merchantsByBusiness,
+        branchesByMerchant
     );
 
-const getAuthorizedSidebar = (user, businesses = [], merchantsByBusiness = new Map()) => {
+const getAuthorizedSidebar = (
+    user,
+    businesses = [],
+    merchantsByBusiness = new Map(),
+    branchesByMerchant = new Map()
+) => {
     const allowed = user.allowedSidebar || [];
 
     if (!allowed.length) {
-        return getFullSidebar(businesses, merchantsByBusiness);
+        return getFullSidebar(businesses, merchantsByBusiness, branchesByMerchant);
     }
 
     const allowedMap = new Map(
@@ -120,21 +155,26 @@ const getAuthorizedSidebar = (user, businesses = [], merchantsByBusiness = new M
         })
         .filter((item) => item.key === "viewbussiness" || item.buttons.length > 0);
 
-    return injectBusinessButtons(sidebar, businesses, merchantsByBusiness);
+    return injectBusinessButtons(
+        sidebar,
+        businesses,
+        merchantsByBusiness,
+        branchesByMerchant
+    );
 };
 
-const groupMerchantsByBusiness = (merchants = []) => {
-    const merchantsByBusiness = new Map();
+const groupByParentId = (items = [], parentField) => {
+    const grouped = new Map();
 
-    for (const merchant of merchants) {
-        const key = String(merchant.bussinessId);
-        if (!merchantsByBusiness.has(key)) {
-            merchantsByBusiness.set(key, []);
+    for (const item of items) {
+        const key = String(item[parentField]);
+        if (!grouped.has(key)) {
+            grouped.set(key, []);
         }
-        merchantsByBusiness.get(key).push(merchant);
+        grouped.get(key).push(item);
     }
 
-    return merchantsByBusiness;
+    return grouped;
 };
 
 const getSidebarForUser = async (user) => {
@@ -146,9 +186,19 @@ const getSidebarForUser = async (user) => {
         .select("name slug businessType bussinessId")
         .sort({ createdAt: -1 });
 
-    const merchantsByBusiness = groupMerchantsByBusiness(merchants);
+    const branches = await Branch.find({ isActive: { $ne: false } })
+        .select("name slug branchCode merchantId isActive")
+        .sort({ createdAt: -1 });
 
-    return getAuthorizedSidebar(user, businesses, merchantsByBusiness);
+    const merchantsByBusiness = groupByParentId(merchants, "bussinessId");
+    const branchesByMerchant = groupByParentId(branches, "merchantId");
+
+    return getAuthorizedSidebar(
+        user,
+        businesses,
+        merchantsByBusiness,
+        branchesByMerchant
+    );
 };
 
 const normalizePermissions = (permissions) => {

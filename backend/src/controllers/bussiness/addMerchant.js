@@ -3,6 +3,7 @@ import formatMerchant from "../../utils/formatMerchant.js";
 import findBussiness from "../../utils/findBussiness.js";
 import hasSidebarButton from "../../utils/hasSidebarButton.js";
 import toBussinessSlug from "../../utils/toBussinessSlug.js";
+import { normalizeCnic, isValidCnic } from "../../utils/cnic.js";
 import { getSidebarForUser } from "../../constants/sidebarCatalog.js";
 
 const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -48,18 +49,23 @@ const addMerchant = async (req, res) => {
 
         const {
             name,
+            description,
             ownerFirstName,
             ownerLastName,
             ownerEmail,
+            ownerCnic,
             frontendDomainUrl,
             gender,
+            dateOfBirth,
             countryCode,
             contactNumber,
+            secondaryContactNumber,
             headAddress,
             country,
             province,
             city,
             district,
+            postalCode,
             businessType,
         } = req.body;
 
@@ -68,6 +74,7 @@ const addMerchant = async (req, res) => {
             ownerFirstName,
             ownerLastName,
             ownerEmail,
+            ownerCnic,
             frontendDomainUrl,
             gender,
             countryCode,
@@ -93,6 +100,7 @@ const addMerchant = async (req, res) => {
 
         const trimmedName = String(name).trim();
         const normalizedEmail = String(ownerEmail).toLowerCase().trim();
+        const normalizedCnic = normalizeCnic(ownerCnic);
         const normalizedGender = String(gender).toLowerCase().trim();
         const normalizedDomainUrl = normalizeDomainUrl(frontendDomainUrl);
 
@@ -107,6 +115,13 @@ const addMerchant = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: "Invalid owner email",
+            });
+        }
+
+        if (!isValidCnic(normalizedCnic)) {
+            return res.status(400).json({
+                success: false,
+                message: "Owner CNIC must be a valid 13-digit number",
             });
         }
 
@@ -147,6 +162,14 @@ const addMerchant = async (req, res) => {
             });
         }
 
+        const existingCnic = await Merchant.findOne({ ownerCnic: normalizedCnic });
+        if (existingCnic) {
+            return res.status(409).json({
+                success: false,
+                message: "Owner CNIC is already registered for another merchant",
+            });
+        }
+
         const existingDomain = await Merchant.findOne({
             frontendDomainUrl: normalizedDomainUrl,
         });
@@ -162,18 +185,26 @@ const addMerchant = async (req, res) => {
             name: trimmedName,
             nameKey,
             slug,
+            description: description ? String(description).trim() : "",
             ownerFirstName: String(ownerFirstName).trim(),
             ownerLastName: String(ownerLastName).trim(),
             ownerEmail: normalizedEmail,
+            ownerCnic: normalizedCnic,
+            profilePitcher: "",
             frontendDomainUrl: normalizedDomainUrl,
             gender: normalizedGender,
+            dateOfBirth: dateOfBirth || null,
             countryCode: String(countryCode).trim(),
             contactNumber: String(contactNumber).trim(),
+            secondaryContactNumber: secondaryContactNumber
+                ? String(secondaryContactNumber).trim()
+                : "",
             headAddress: String(headAddress).trim(),
             country: String(country).trim(),
             province: String(province).trim(),
             city: String(city).trim(),
             district: String(district).trim(),
+            postalCode: postalCode ? String(postalCode).trim() : "",
             businessType: String(businessType).trim(),
             isActive: true,
             createdBy: req.user._id,
@@ -194,7 +225,7 @@ const addMerchant = async (req, res) => {
         if (error?.code === 11000) {
             return res.status(409).json({
                 success: false,
-                message: "Merchant with this name, email, or domain already exists",
+                message: "Merchant with this name, email, CNIC, or domain already exists",
             });
         }
 

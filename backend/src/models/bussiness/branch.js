@@ -1,10 +1,16 @@
 import mongoose from "mongoose";
 
-const merchantSchema = new mongoose.Schema(
+const branchSchema = new mongoose.Schema(
     {
         bussinessId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "bussiness",
+            required: true,
+            index: true,
+        },
+        merchantId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "merchant",
             required: true,
             index: true,
         },
@@ -26,68 +32,13 @@ const merchantSchema = new mongoose.Schema(
             lowercase: true,
             trim: true,
         },
-        ownerFirstName: {
+        branchCode: {
             type: String,
             required: true,
             trim: true,
+            uppercase: true,
         },
-        ownerLastName: {
-            type: String,
-            required: true,
-            trim: true,
-        },
-        ownerEmail: {
-            type: String,
-            required: true,
-            lowercase: true,
-            trim: true,
-        },
-        ownerCnic: {
-            type: String,
-            required: true,
-            trim: true,
-        },
-        profilePitcher: {
-            type: String,
-            default: "",
-        },
-        description: {
-            type: String,
-            default: "",
-            trim: true,
-            maxlength: 500,
-        },
-        frontendDomainUrl: {
-            type: String,
-            required: true,
-            trim: true,
-        },
-        gender: {
-            type: String,
-            enum: ["male", "female"],
-            required: true,
-            set: (value) => String(value).toLowerCase(),
-        },
-        dateOfBirth: {
-            type: Date,
-            default: null,
-        },
-        countryCode: {
-            type: String,
-            required: true,
-            trim: true,
-        },
-        contactNumber: {
-            type: String,
-            required: true,
-            trim: true,
-        },
-        secondaryContactNumber: {
-            type: String,
-            default: "",
-            trim: true,
-        },
-        headAddress: {
+        address: {
             type: String,
             required: true,
             trim: true,
@@ -117,9 +68,50 @@ const merchantSchema = new mongoose.Schema(
             default: "",
             trim: true,
         },
-        businessType: {
+        countryCode: {
             type: String,
             required: true,
+            trim: true,
+        },
+        contactNumber: {
+            type: String,
+            required: true,
+            trim: true,
+        },
+        email: {
+            type: String,
+            default: "",
+            lowercase: true,
+            trim: true,
+        },
+        managerName: {
+            type: String,
+            default: "",
+            trim: true,
+        },
+        managerContact: {
+            type: String,
+            default: "",
+            trim: true,
+        },
+        openingTime: {
+            type: String,
+            default: "",
+            trim: true,
+        },
+        closingTime: {
+            type: String,
+            default: "",
+            trim: true,
+        },
+        latitude: {
+            type: String,
+            default: "",
+            trim: true,
+        },
+        longitude: {
+            type: String,
+            default: "",
             trim: true,
         },
         isActive: {
@@ -135,11 +127,9 @@ const merchantSchema = new mongoose.Schema(
     { timestamps: true }
 );
 
-merchantSchema.index({ bussinessId: 1, nameKey: 1 }, { unique: true });
-merchantSchema.index({ bussinessId: 1, slug: 1 }, { unique: true });
-merchantSchema.index({ ownerEmail: 1 }, { unique: true });
-merchantSchema.index({ ownerCnic: 1 }, { unique: true });
-merchantSchema.index({ frontendDomainUrl: 1 }, { unique: true });
+branchSchema.index({ merchantId: 1, nameKey: 1 }, { unique: true });
+branchSchema.index({ merchantId: 1, slug: 1 }, { unique: true });
+branchSchema.index({ merchantId: 1, branchCode: 1 }, { unique: true });
 
-const Merchant = mongoose.model("merchant", merchantSchema);
-export default Merchant;
+const Branch = mongoose.model("branch", branchSchema);
+export default Branch;

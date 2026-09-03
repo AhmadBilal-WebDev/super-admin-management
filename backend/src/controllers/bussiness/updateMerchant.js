@@ -4,6 +4,7 @@ import findBussiness from "../../utils/findBussiness.js";
 import findMerchant from "../../utils/findMerchant.js";
 import hasSidebarButton from "../../utils/hasSidebarButton.js";
 import toBussinessSlug from "../../utils/toBussinessSlug.js";
+import { normalizeCnic, isValidCnic } from "../../utils/cnic.js";
 import { getSidebarForUser } from "../../constants/sidebarCatalog.js";
 
 const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -54,18 +55,23 @@ const updateMerchant = async (req, res) => {
 
         const {
             name,
+            description,
             ownerFirstName,
             ownerLastName,
             ownerEmail,
+            ownerCnic,
             frontendDomainUrl,
             gender,
+            dateOfBirth,
             countryCode,
             contactNumber,
+            secondaryContactNumber,
             headAddress,
             country,
             province,
             city,
             district,
+            postalCode,
             businessType,
             isActive,
         } = req.body;
@@ -118,6 +124,10 @@ const updateMerchant = async (req, res) => {
             update.ownerLastName = String(ownerLastName).trim();
         }
 
+        if (description !== undefined) {
+            update.description = String(description).trim();
+        }
+
         if (ownerEmail !== undefined) {
             const normalizedEmail = String(ownerEmail).toLowerCase().trim();
 
@@ -141,6 +151,31 @@ const updateMerchant = async (req, res) => {
             }
 
             update.ownerEmail = normalizedEmail;
+        }
+
+        if (ownerCnic !== undefined) {
+            const normalizedCnic = normalizeCnic(ownerCnic);
+
+            if (!isValidCnic(normalizedCnic)) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Owner CNIC must be a valid 13-digit number",
+                });
+            }
+
+            const existingCnic = await Merchant.findOne({
+                ownerCnic: normalizedCnic,
+                _id: { $ne: merchant._id },
+            });
+
+            if (existingCnic) {
+                return res.status(409).json({
+                    success: false,
+                    message: "Owner CNIC is already registered for another merchant",
+                });
+            }
+
+            update.ownerCnic = normalizedCnic;
         }
 
         if (frontendDomainUrl !== undefined) {
@@ -181,12 +216,20 @@ const updateMerchant = async (req, res) => {
             update.gender = normalizedGender;
         }
 
+        if (dateOfBirth !== undefined) {
+            update.dateOfBirth = dateOfBirth || null;
+        }
+
         if (countryCode !== undefined) {
             update.countryCode = String(countryCode).trim();
         }
 
         if (contactNumber !== undefined) {
             update.contactNumber = String(contactNumber).trim();
+        }
+
+        if (secondaryContactNumber !== undefined) {
+            update.secondaryContactNumber = String(secondaryContactNumber).trim();
         }
 
         if (headAddress !== undefined) {
@@ -207,6 +250,10 @@ const updateMerchant = async (req, res) => {
 
         if (district !== undefined) {
             update.district = String(district).trim();
+        }
+
+        if (postalCode !== undefined) {
+            update.postalCode = String(postalCode).trim();
         }
 
         if (businessType !== undefined) {
@@ -245,7 +292,7 @@ const updateMerchant = async (req, res) => {
         if (error?.code === 11000) {
             return res.status(409).json({
                 success: false,
-                message: "Merchant with this name, email, or domain already exists",
+                message: "Merchant with this name, email, CNIC, or domain already exists",
             });
         }
 
