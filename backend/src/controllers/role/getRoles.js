@@ -1,11 +1,22 @@
 import LoginSuperAdmin from "../../models/auth/login.js";
 import getPublicUser from "../../utils/getPublicUser.js";
+import {
+    canCreateRoles,
+    canViewAllRoles,
+} from "../../utils/findManageableRole.js";
 
 const getRoles = async (req, res) => {
     try {
+        if (!canViewAllRoles(req.user) && !canCreateRoles(req.user)) {
+            return res.status(403).json({
+                success: false,
+                message: "You are not allowed to view roles",
+            });
+        }
+
         const filter = { accountType: "role" };
 
-        if (req.user.accountType === "role") {
+        if (req.user.accountType === "role" && !canViewAllRoles(req.user)) {
             filter.createdBy = req.user._id;
         }
 

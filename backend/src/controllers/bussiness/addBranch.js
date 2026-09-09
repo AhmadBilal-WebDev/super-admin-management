@@ -5,6 +5,7 @@ import findMerchant from "../../utils/findMerchant.js";
 import hasSidebarButton from "../../utils/hasSidebarButton.js";
 import toBussinessSlug from "../../utils/toBussinessSlug.js";
 import { getSidebarForUser } from "../../constants/sidebarCatalog.js";
+import { grantSidebarPath } from "../../utils/grantSidebarPath.js";
 
 const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
@@ -162,6 +163,13 @@ const addBranch = async (req, res) => {
                     : isActive === true || isActive === "true",
             createdBy: req.user._id,
         });
+
+        await grantSidebarPath(req.user, [
+            "viewbussiness",
+            parentBussiness._id,
+            merchant._id,
+            branch._id,
+        ]);
 
         return res.status(201).json({
             success: true,

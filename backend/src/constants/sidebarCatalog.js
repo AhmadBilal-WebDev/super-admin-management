@@ -5,6 +5,7 @@ import {
     toPermissionNodes,
     mergePermissionNodes,
 } from "../utils/permissionNode.js";
+import { getEffectiveAllowedSidebar } from "../utils/grantSidebarPath.js";
 
 const sidebarCatalog = [
     {
@@ -169,8 +170,12 @@ const filterTreeByPermissions = (treeNodes = [], permissionNodes = []) => {
         });
 };
 
-const getAuthorizedSidebar = (user, tree = []) => {
-    const allowed = user?.allowedSidebar || [];
+const getAuthorizedSidebar = async (user, tree = []) => {
+    const allowed = await getEffectiveAllowedSidebar(user);
+
+    if (user && typeof user === "object") {
+        user.effectiveAllowedSidebar = allowed;
+    }
 
     if (!allowed.length) {
         return tree;

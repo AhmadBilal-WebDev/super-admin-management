@@ -1,7 +1,7 @@
 import { toPermissionNodes } from "./permissionNode.js";
 
 const hasSidebarPath = (user, ...keys) => {
-    const allowed = user?.allowedSidebar || [];
+    const allowed = user?.effectiveAllowedSidebar || user?.allowedSidebar || [];
 
     if (!allowed.length) {
         return true;

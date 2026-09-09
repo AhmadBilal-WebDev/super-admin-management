@@ -1,4 +1,25 @@
 import LoginSuperAdmin from "../models/auth/login.js";
+import hasSidebarButton from "./hasSidebarButton.js";
+
+const canViewAllRoles = (user) => hasSidebarButton(user, "roles", "all-roles");
+
+const canCreateRoles = (user) => hasSidebarButton(user, "roles", "create-role");
+
+const canManageRole = (user, roleUser) => {
+    if (!user || !roleUser) {
+        return false;
+    }
+
+    if (user.accountType !== "role") {
+        return true;
+    }
+
+    if (String(roleUser.createdBy) === String(user._id)) {
+        return true;
+    }
+
+    return canViewAllRoles(user);
+};
 
 const findManageableRole = async (req, roleId) => {
     const roleUser = await LoginSuperAdmin.findById(roleId);
@@ -30,10 +51,7 @@ const findManageableRole = async (req, roleId) => {
         };
     }
 
-    const isOwner = req.user.accountType !== "role";
-    const isCreator = String(roleUser.createdBy) === String(req.user._id);
-
-    if (!isOwner && !isCreator) {
+    if (!canManageRole(req.user, roleUser)) {
         return {
             error: {
                 status: 403,
@@ -45,4 +63,5 @@ const findManageableRole = async (req, roleId) => {
     return { roleUser };
 };
 
+export { canViewAllRoles, canCreateRoles, canManageRole };
 export default findManageableRole;

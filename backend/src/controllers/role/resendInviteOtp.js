@@ -1,6 +1,8 @@
 import bcrypt from "bcryptjs";
 import sendOtpEmail from "../../utils/sendOtpEmail.js";
-import findManageableRole from "../../utils/findManageableRole.js";
+import findManageableRole, {
+    canManageRole,
+} from "../../utils/findManageableRole.js";
 import LoginSuperAdmin from "../../models/auth/login.js";
 import {
     INVITE_OTP_EXPIRY_MS,
@@ -33,10 +35,14 @@ const resendInviteOtp = async (req, res) => {
                 });
             }
 
-            const isOwner = req.user.accountType !== "role";
-            const isCreator = String(roleUser.createdBy) === String(req.user._id);
+            if (String(roleUser._id) === String(req.user._id)) {
+                return res.status(400).json({
+                    success: false,
+                    message: "You cannot manage your own account from role APIs",
+                });
+            }
 
-            if (!isOwner && !isCreator) {
+            if (!canManageRole(req.user, roleUser)) {
                 return res.status(403).json({
                     success: false,
                     message: "You are not allowed to resend OTP for this role",

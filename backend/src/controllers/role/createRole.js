@@ -4,6 +4,7 @@ import LoginSuperAdmin from "../../models/auth/login.js";
 import { normalizePermissions } from "../../constants/sidebarCatalog.js";
 import sendOtpEmail from "../../utils/sendOtpEmail.js";
 import getPublicUser from "../../utils/getPublicUser.js";
+import { canCreateRoles } from "../../utils/findManageableRole.js";
 import {
     INVITE_OTP_EXPIRY_MS,
     INVITE_OTP_VALIDITY_TEXT,
@@ -11,6 +12,13 @@ import {
 
 const createRole = async (req, res) => {
     try {
+        if (!canCreateRoles(req.user)) {
+            return res.status(403).json({
+                success: false,
+                message: "You are not allowed to create a role",
+            });
+        }
+
         const {
             firstName,
             lastName,

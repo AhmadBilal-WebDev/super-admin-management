@@ -3,6 +3,7 @@ import formatBussiness from "../../utils/formatBussiness.js";
 import hasSidebarButton from "../../utils/hasSidebarButton.js";
 import toBussinessSlug from "../../utils/toBussinessSlug.js";
 import { getSidebarForUser } from "../../constants/sidebarCatalog.js";
+import { grantSidebarPath } from "../../utils/grantSidebarPath.js";
 
 const addBussiness = async (req, res) => {
     try {
@@ -53,6 +54,8 @@ const addBussiness = async (req, res) => {
             isActive: true,
             createdBy: req.user._id,
         });
+
+        await grantSidebarPath(req.user, ["viewbussiness", bussiness._id]);
 
         return res.status(201).json({
             success: true,

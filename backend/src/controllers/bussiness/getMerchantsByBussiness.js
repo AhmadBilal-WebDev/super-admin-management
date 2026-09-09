@@ -2,6 +2,7 @@ import Merchant from "../../models/bussiness/merchant.js";
 import formatMerchant from "../../utils/formatMerchant.js";
 import findBussiness from "../../utils/findBussiness.js";
 import { hasSidebarPath } from "../../utils/hasSidebarButton.js";
+import { attachEffectiveSidebar } from "../../utils/grantSidebarPath.js";
 
 const getMerchantsByBussiness = async (req, res) => {
     try {
@@ -15,6 +16,7 @@ const getMerchantsByBussiness = async (req, res) => {
         }
 
         const bussinessKey = String(parentBussiness._id);
+        await attachEffectiveSidebar(req.user);
 
         if (!hasSidebarPath(req.user, "viewbussiness", bussinessKey)) {
             return res.status(403).json({

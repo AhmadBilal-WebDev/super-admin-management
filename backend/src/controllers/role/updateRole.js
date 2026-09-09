@@ -1,34 +1,16 @@
 import LoginSuperAdmin from "../../models/auth/login.js";
 import { normalizePermissions } from "../../constants/sidebarCatalog.js";
 import getPublicUser from "../../utils/getPublicUser.js";
+import findManageableRole from "../../utils/findManageableRole.js";
 
 const updateRole = async (req, res) => {
     try {
-        const { id } = req.params;
+        const { roleUser, error } = await findManageableRole(req, req.params.id);
 
-        const roleUser = await LoginSuperAdmin.findById(id);
-
-        if (!roleUser) {
-            return res.status(404).json({
+        if (error) {
+            return res.status(error.status).json({
                 success: false,
-                message: "Role not found",
-            });
-        }
-
-        if (roleUser.accountType !== "role") {
-            return res.status(400).json({
-                success: false,
-                message: "This account is not a role. Only created roles can be updated",
-            });
-        }
-
-        const isOwner = req.user.accountType !== "role";
-        const isCreator = String(roleUser.createdBy) === String(req.user._id);
-
-        if (!isOwner && !isCreator) {
-            return res.status(403).json({
-                success: false,
-                message: "You are not allowed to update this role",
+                message: error.message,
             });
         }
 
