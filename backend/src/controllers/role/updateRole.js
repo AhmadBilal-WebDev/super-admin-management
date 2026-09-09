@@ -105,7 +105,7 @@ const updateRole = async (req, res) => {
                 });
             }
 
-            update.allowedSidebar = normalizePermissions(permissions);
+            update.allowedSidebar = await normalizePermissions(permissions);
         }
 
         if (Object.keys(update).length === 0) {

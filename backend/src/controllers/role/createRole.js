@@ -70,7 +70,7 @@ const createRole = async (req, res) => {
         }
 
         const normalizedEmail = email.toLowerCase().trim();
-        const normalizedPermissions = normalizePermissions(permissions);
+        const normalizedPermissions = await normalizePermissions(permissions);
 
         const existingUser = await LoginSuperAdmin.findOne({ email: normalizedEmail });
         if (existingUser) {

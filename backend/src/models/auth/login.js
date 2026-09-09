@@ -124,12 +124,7 @@ const loginSchema = new mongoose.Schema(
             default: null,
         },
         allowedSidebar: {
-            type: [
-                {
-                    key: { type: String, required: true },
-                    buttons: { type: [String], default: [] },
-                },
-            ],
+            type: [mongoose.Schema.Types.Mixed],
             default: [],
         },
     },

@@ -1,17 +1,10 @@
 import Merchant from "../../models/bussiness/merchant.js";
 import formatMerchant from "../../utils/formatMerchant.js";
 import findBussiness from "../../utils/findBussiness.js";
-import hasSidebarButton from "../../utils/hasSidebarButton.js";
+import { hasSidebarPath } from "../../utils/hasSidebarButton.js";
 
 const getMerchantsByBussiness = async (req, res) => {
     try {
-        if (!hasSidebarButton(req.user, "viewbussiness", "viewallbussiness")) {
-            return res.status(403).json({
-                success: false,
-                message: "You are not allowed to view merchants",
-            });
-        }
-
         const parentBussiness = await findBussiness(req.params.bussinessId);
 
         if (!parentBussiness) {
@@ -21,10 +14,28 @@ const getMerchantsByBussiness = async (req, res) => {
             });
         }
 
+        const bussinessKey = String(parentBussiness._id);
+
+        if (!hasSidebarPath(req.user, "viewbussiness", bussinessKey)) {
+            return res.status(403).json({
+                success: false,
+                message: "You are not allowed to view merchants of this business",
+            });
+        }
+
         const merchants = await Merchant.find({
             bussinessId: parentBussiness._id,
             isActive: { $ne: false },
         }).sort({ createdAt: -1 });
+
+        const allowedMerchants = merchants.filter((merchant) =>
+            hasSidebarPath(
+                req.user,
+                "viewbussiness",
+                bussinessKey,
+                String(merchant._id)
+            )
+        );
 
         return res.status(200).json({
             success: true,
@@ -35,8 +46,8 @@ const getMerchantsByBussiness = async (req, res) => {
                 slug: parentBussiness.slug || "",
                 description: parentBussiness.description || "",
             },
-            count: merchants.length,
-            merchants: merchants.map((merchant) => formatMerchant(merchant)),
+            count: allowedMerchants.length,
+            merchants: allowedMerchants.map((merchant) => formatMerchant(merchant)),
         });
     } catch (error) {
         console.error("Get merchants error:", error);

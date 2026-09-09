@@ -1,6 +1,10 @@
 import Bussiness from "../models/bussiness/bussiness.js";
 import Merchant from "../models/bussiness/merchant.js";
 import Branch from "../models/bussiness/branch.js";
+import {
+    toPermissionNodes,
+    mergePermissionNodes,
+} from "../utils/permissionNode.js";
 
 const sidebarCatalog = [
     {
@@ -45,124 +49,6 @@ const sidebarCatalog = [
     },
 ];
 
-const VIEW_BUSSINESS_PERMISSION = "viewallbussiness";
-
-const toBranchButtons = (branches = []) =>
-    branches.map((item) => ({
-        key: String(item._id),
-        slug: item.slug || "",
-        label: item.name,
-        branchCode: item.branchCode || "",
-        isActive: item.isActive !== false,
-    }));
-
-const toMerchantButtons = (merchants = [], branchesByMerchant = new Map()) =>
-    merchants.map((item) => ({
-        key: String(item._id),
-        slug: item.slug || "",
-        label: item.name,
-        businessType: item.businessType || "",
-        buttons: toBranchButtons(branchesByMerchant.get(String(item._id)) || []),
-    }));
-
-const toBusinessButtons = (
-    businesses = [],
-    merchantsByBusiness = new Map(),
-    branchesByMerchant = new Map()
-) =>
-    businesses.map((item) => ({
-        key: String(item._id),
-        slug: item.slug || "",
-        label: item.name,
-        description: item.description || "",
-        buttons: toMerchantButtons(
-            merchantsByBusiness.get(String(item._id)) || [],
-            branchesByMerchant
-        ),
-    }));
-
-const injectBusinessButtons = (
-    sidebar,
-    businesses = [],
-    merchantsByBusiness = new Map(),
-    branchesByMerchant = new Map()
-) =>
-    sidebar.map((item) => {
-        if (item.key !== "viewbussiness") {
-            return item;
-        }
-
-        return {
-            ...item,
-            buttons: toBusinessButtons(
-                businesses,
-                merchantsByBusiness,
-                branchesByMerchant
-            ),
-        };
-    });
-
-const getFullSidebar = (
-    businesses = [],
-    merchantsByBusiness = new Map(),
-    branchesByMerchant = new Map()
-) =>
-    injectBusinessButtons(
-        sidebarCatalog.map((item) => ({
-            key: item.key,
-            label: item.label,
-            buttons: item.buttons.map((btn) => ({ ...btn })),
-        })),
-        businesses,
-        merchantsByBusiness,
-        branchesByMerchant
-    );
-
-const getAuthorizedSidebar = (
-    user,
-    businesses = [],
-    merchantsByBusiness = new Map(),
-    branchesByMerchant = new Map()
-) => {
-    const allowed = user.allowedSidebar || [];
-
-    if (!allowed.length) {
-        return getFullSidebar(businesses, merchantsByBusiness, branchesByMerchant);
-    }
-
-    const allowedMap = new Map(
-        allowed.map((item) => [item.key, new Set(item.buttons || [])])
-    );
-
-    const sidebar = sidebarCatalog
-        .filter((item) => allowedMap.has(item.key))
-        .map((item) => {
-            if (item.key === "viewbussiness") {
-                return {
-                    key: item.key,
-                    label: item.label,
-                    buttons: [],
-                };
-            }
-
-            return {
-                key: item.key,
-                label: item.label,
-                buttons: item.buttons.filter((btn) =>
-                    allowedMap.get(item.key).has(btn.key)
-                ),
-            };
-        })
-        .filter((item) => item.key === "viewbussiness" || item.buttons.length > 0);
-
-    return injectBusinessButtons(
-        sidebar,
-        businesses,
-        merchantsByBusiness,
-        branchesByMerchant
-    );
-};
-
 const groupByParentId = (items = [], parentField) => {
     const grouped = new Map();
 
@@ -177,70 +63,198 @@ const groupByParentId = (items = [], parentField) => {
     return grouped;
 };
 
-const getSidebarForUser = async (user) => {
-    const businesses = await Bussiness.find({ isActive: { $ne: false } })
-        .select("name slug description")
-        .sort({ createdAt: -1 });
+const toBranchNodes = (branches = []) =>
+    branches.map((item) => ({
+        key: String(item._id),
+        slug: item.slug || "",
+        label: item.name,
+        branchCode: item.branchCode || "",
+        isActive: item.isActive !== false,
+        buttons: [],
+    }));
 
-    const merchants = await Merchant.find({ isActive: { $ne: false } })
-        .select("name slug businessType bussinessId")
-        .sort({ createdAt: -1 });
+const toMerchantNodes = (merchants = [], branchesByMerchant = new Map()) =>
+    merchants.map((item) => ({
+        key: String(item._id),
+        slug: item.slug || "",
+        label: item.name,
+        businessType: item.businessType || "",
+        buttons: toBranchNodes(branchesByMerchant.get(String(item._id)) || []),
+    }));
 
-    const branches = await Branch.find({ isActive: { $ne: false } })
-        .select("name slug branchCode merchantId isActive")
-        .sort({ createdAt: -1 });
+const toBusinessNodes = (
+    businesses = [],
+    merchantsByBusiness = new Map(),
+    branchesByMerchant = new Map()
+) =>
+    businesses.map((item) => ({
+        key: String(item._id),
+        slug: item.slug || "",
+        label: item.name,
+        description: item.description || "",
+        buttons: toMerchantNodes(
+            merchantsByBusiness.get(String(item._id)) || [],
+            branchesByMerchant
+        ),
+    }));
 
-    const merchantsByBusiness = groupByParentId(merchants, "bussinessId");
-    const branchesByMerchant = groupByParentId(branches, "merchantId");
-
-    return getAuthorizedSidebar(
-        user,
-        businesses,
-        merchantsByBusiness,
-        branchesByMerchant
-    );
-};
-
-const normalizePermissions = (permissions) => {
-    const catalogMap = new Map(sidebarCatalog.map((item) => [item.key, item]));
-
-    return permissions.map((item) => {
-        const catalogItem = catalogMap.get(item.key);
-
-        if (!catalogItem) {
-            throw new Error(`Invalid sidebar key: ${item.key}`);
-        }
-
+const buildSidebarTree = (
+    businesses = [],
+    merchantsByBusiness = new Map(),
+    branchesByMerchant = new Map()
+) =>
+    sidebarCatalog.map((item) => {
         if (item.key === "viewbussiness") {
             return {
-                key: catalogItem.key,
-                buttons: [VIEW_BUSSINESS_PERMISSION],
+                key: item.key,
+                label: item.label,
+                buttons: toBusinessNodes(
+                    businesses,
+                    merchantsByBusiness,
+                    branchesByMerchant
+                ),
             };
         }
 
-        const allowedButtons = Array.isArray(item.buttons) ? item.buttons : [];
-        const validButtonKeys = new Set(catalogItem.buttons.map((btn) => btn.key));
-
-        const buttons = allowedButtons.filter((btnKey) => {
-            if (!validButtonKeys.has(btnKey)) {
-                throw new Error(`Invalid button "${btnKey}" for sidebar "${item.key}"`);
-            }
-            return true;
-        });
-
-        if (buttons.length === 0) {
-            throw new Error(`Select at least one inner button for "${catalogItem.label}"`);
-        }
-
         return {
-            key: catalogItem.key,
-            buttons,
+            key: item.key,
+            label: item.label,
+            buttons: item.buttons.map((btn) => ({ ...btn, buttons: [] })),
         };
     });
+
+const loadSidebarTree = async () => {
+    const [businesses, merchants, branches] = await Promise.all([
+        Bussiness.find({ isActive: { $ne: false } })
+            .select("name slug description")
+            .sort({ createdAt: -1 }),
+        Merchant.find({ isActive: { $ne: false } })
+            .select("name slug businessType bussinessId")
+            .sort({ createdAt: -1 }),
+        Branch.find({ isActive: { $ne: false } })
+            .select("name slug branchCode merchantId isActive")
+            .sort({ createdAt: -1 }),
+    ]);
+
+    return buildSidebarTree(
+        businesses,
+        groupByParentId(merchants, "bussinessId"),
+        groupByParentId(branches, "merchantId")
+    );
+};
+
+const filterTreeByPermissions = (treeNodes = [], permissionNodes = []) => {
+    const permissionMap = new Map(
+        toPermissionNodes(permissionNodes).map((node) => [node.key, node])
+    );
+
+    return treeNodes
+        .filter((node) => permissionMap.has(String(node.key)))
+        .map((node) => {
+            const permission = permissionMap.get(String(node.key));
+            const children = node.buttons || [];
+
+            if (permission.allowAll) {
+                return { ...node };
+            }
+
+            if (!permission.buttons.length) {
+                return { ...node, buttons: [] };
+            }
+
+            return {
+                ...node,
+                buttons: filterTreeByPermissions(children, permission.buttons),
+            };
+        });
+};
+
+const getAuthorizedSidebar = (user, tree = []) => {
+    const allowed = user?.allowedSidebar || [];
+
+    if (!allowed.length) {
+        return tree;
+    }
+
+    return filterTreeByPermissions(tree, allowed);
+};
+
+const getFullSidebar = async () => loadSidebarTree();
+
+const getSidebarForUser = async (user) =>
+    getAuthorizedSidebar(user, await loadSidebarTree());
+
+const toStoredPermission = (treeNode, permission) => {
+    const stored = { key: treeNode.key, buttons: permission.buttons };
+
+    if (permission.allowAll) {
+        stored.allowAll = true;
+    }
+
+    return stored;
+};
+
+const normalizeAgainstTree = (permissionNodes, treeNodes, parentLabel = "") => {
+    const treeMap = new Map(treeNodes.map((node) => [String(node.key), node]));
+
+    return mergePermissionNodes(permissionNodes).map((permission) => {
+        const treeNode = treeMap.get(permission.key);
+
+        if (!treeNode) {
+            throw new Error(
+                parentLabel
+                    ? `Invalid button "${permission.key}" inside "${parentLabel}"`
+                    : `Invalid sidebar key: ${permission.key}`
+            );
+        }
+
+        const children = treeNode.buttons || [];
+
+        if (permission.allowAll) {
+            return toStoredPermission(treeNode, {
+                allowAll: true,
+                buttons: [],
+            });
+        }
+
+        if (!permission.buttons.length) {
+            if (children.length) {
+                throw new Error(
+                    `Select at least one inner button for "${treeNode.label}"`
+                );
+            }
+
+            return toStoredPermission(treeNode, { buttons: [] });
+        }
+
+        if (!children.length) {
+            throw new Error(`"${treeNode.label}" has no inner buttons to select`);
+        }
+
+        return toStoredPermission(treeNode, {
+            buttons: normalizeAgainstTree(
+                permission.buttons,
+                children,
+                treeNode.label
+            ),
+        });
+    });
+};
+
+const normalizePermissions = async (permissions) => {
+    const permissionNodes = toPermissionNodes(permissions);
+
+    if (!permissionNodes.length) {
+        throw new Error("Select at least one sidebar permission");
+    }
+
+    return normalizeAgainstTree(permissionNodes, await loadSidebarTree());
 };
 
 export {
     sidebarCatalog,
+    buildSidebarTree,
+    loadSidebarTree,
     getFullSidebar,
     getAuthorizedSidebar,
     getSidebarForUser,
