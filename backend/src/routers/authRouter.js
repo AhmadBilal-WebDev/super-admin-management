@@ -18,10 +18,12 @@ import setInvitePassword from "../controllers/role/setInvitePassword.js";
 import updateProfile from "../controllers/auth/updateProfile.js";
 import updatePassword from "../controllers/auth/updatePassword.js";
 import removeProfilePitcher from "../controllers/auth/removeProfilePitcher.js";
+import logout from "../controllers/auth/logout.js";
 
 const router = express.Router();
 
 router.post("/superadmin/login", login);
+router.post("/superadmin/logout", authMiddleware, logout);
 
 router.post("/superadmin/forgot-password", forgotPassword);
 router.post("/superadmin/reset-password", resetPassword);

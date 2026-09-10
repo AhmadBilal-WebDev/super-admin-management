@@ -1,8 +1,8 @@
-import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import LoginSuperAdmin from "../../models/auth/login.js";
 import { getSidebarForUser } from "../../constants/sidebarCatalog.js";
 import getPublicUser from "../../utils/getPublicUser.js";
+import { createAuthToken } from "../../utils/authToken.js";
 
 const login = async (req, res) => {
     try {
@@ -108,26 +108,10 @@ const login = async (req, res) => {
             });
         }
 
-        user.tokenVersion = (user.tokenVersion || 0) + 1;
-        if (user.gender) {
-            user.gender = String(user.gender).toLowerCase();
-        }
-        await user.save();
-
         const payload = getPublicUser(user);
         payload.tokenVersion = user.tokenVersion;
 
-        const token = jwt.sign(
-            {
-                id: user._id,
-                email: user.email,
-                firstName: user.firstName,
-                lastName: user.lastName,
-                tokenVersion: user.tokenVersion,
-            },
-            process.env.JWT_SECRET,
-            { expiresIn: process.env.JWT_EXPIRES_IN || "1h" }
-        );
+        const { token } = createAuthToken(user);
 
         return res.status(200).json({
             success: true,

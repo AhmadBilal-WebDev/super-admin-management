@@ -21,9 +21,11 @@ const sidebarCatalog = [
         key: "merchantdirectory",
         label: "Merchant Directory",
         buttons: [
-            { key: "createbussiness", label: "Create Business" },
+            { key: "createbussiness", label: "Add New Business" },
         ],
+
     },
+
     {
         key: "viewbussiness",
         label: "View All Businesses",
@@ -31,10 +33,10 @@ const sidebarCatalog = [
     },
     {
         key: "roles",
-        label: "Roles",
+        label: "Roles Management",
         buttons: [
             { key: "all-roles", label: "All Roles" },
-            { key: "create-role", label: "Create Role" },
+            { key: "create-role", label: "Add New Role" },
         ],
     },
     {
