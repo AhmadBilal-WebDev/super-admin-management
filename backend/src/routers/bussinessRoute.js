@@ -8,6 +8,10 @@ import updateMerchant from "../controllers/bussiness/updateMerchant.js";
 import deleteMerchant from "../controllers/bussiness/deleteMerchant.js";
 import updateBussiness from "../controllers/bussiness/updateBussiness.js";
 import deleteBussiness from "../controllers/bussiness/deleteBussiness.js";
+import toggleMerchantStatus from "../controllers/bussiness/toggleMerchantStatus.js";
+import toggleBranchStatus from "../controllers/bussiness/toggleBranchStatus.js";
+import updateBranch from "../controllers/bussiness/updateBranch.js";
+import deleteBranch from "../controllers/bussiness/deleteBranch.js";
 
 const router = express.Router();
 
@@ -36,6 +40,26 @@ router.delete(
     "/superadmin/bussiness/:bussinessId/delete-merchant/:merchantId",
     authMiddleware,
     deleteMerchant
+);
+router.put(
+    "/superadmin/bussiness/:bussinessId/merchant/:merchantId/status",
+    authMiddleware,
+    toggleMerchantStatus
+);
+router.put(
+    "/superadmin/bussiness/:bussinessId/merchant/:merchantId/branch/:branchId/status",
+    authMiddleware,
+    toggleBranchStatus
+);
+router.put(
+    "/superadmin/bussiness/:bussinessId/merchant/:merchantId/update-branch/:branchId",
+    authMiddleware,
+    updateBranch
+);
+router.delete(
+    "/superadmin/bussiness/:bussinessId/merchant/:merchantId/delete-branch/:branchId",
+    authMiddleware,
+    deleteBranch
 );
 router.put("/superadmin/update-bussiness/:id", authMiddleware, updateBussiness);
 router.delete("/superadmin/delete-bussiness/:id", authMiddleware, deleteBussiness);
