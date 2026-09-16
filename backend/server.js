@@ -2,9 +2,10 @@ import express from "express";
 import dotenv from "dotenv";
 dotenv.config();
 import db from "./src/config/db.js";
-import authRouter from "./src/routers/authRouter.js";
-import bussinessRoute from "./src/routers/bussinessRoute.js";
-import errorHandler from "./src/middlewares/errorHandler.js";
+import authRouter from "./src/routers/superadminRouter/authRouter.js";
+import bussinessRoute from "./src/routers/superadminRouter/bussinessRoute.js";
+import ownerRouter from "./src/routers/tenantRouter/ownerLogin.js";
+import errorHandler from "./src/middlewares/superAdminMiddleware/errorHandler.js";
 import cors from "cors";
 
 const app = express();
@@ -26,6 +27,7 @@ app.get("/", (req, res) => {
 
 app.use("/api/auth", authRouter);
 app.use("/api/auth", bussinessRoute);
+app.use("/api/tenant", ownerRouter);
 
 app.use(errorHandler);
 

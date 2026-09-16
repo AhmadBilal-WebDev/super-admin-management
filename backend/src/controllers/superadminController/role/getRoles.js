@@ -1,0 +1,42 @@
+import LoginSuperAdmin from "../../../models/superadminModels/auth/login.js";
+import getPublicUser from "../../../utils/superadminUtils/getPublicUser.js";
+import {
+    canCreateRoles,
+    canViewAllRoles,
+} from "../../../utils/superadminUtils/findManageableRole.js";
+
+const getRoles = async (req, res) => {
+    try {
+        if (!canViewAllRoles(req.user) && !canCreateRoles(req.user)) {
+            return res.status(403).json({
+                success: false,
+                message: "You are not allowed to view roles",
+            });
+        }
+
+        const filter = { accountType: "role" };
+
+        if (req.user.accountType === "role" && !canViewAllRoles(req.user)) {
+            filter.createdBy = req.user._id;
+        }
+
+        const roles = await LoginSuperAdmin.find(filter)
+            .select("-password -otp")
+            .sort({ createdAt: -1 });
+
+        return res.status(200).json({
+            success: true,
+            message: "Roles fetched successfully",
+            count: roles.length,
+            roles: roles.map((role) => getPublicUser(role)),
+        });
+    } catch (error) {
+        console.error("Get roles error:", error);
+        return res.status(500).json({
+            success: false,
+            message: error.message || "Failed to fetch roles",
+        });
+    }
+};
+
+export default getRoles;

@@ -1,0 +1,25 @@
+const getPublicOwner = (merchant) => ({
+    id: merchant._id,
+    bussinessId: merchant.bussinessId,
+    name: merchant.name,
+    slug: merchant.slug || "",
+    description: merchant.description || "",
+    ownerFirstName: merchant.ownerFirstName,
+    ownerLastName: merchant.ownerLastName,
+    ownerEmail: merchant.ownerEmail,
+    profilePitcher: merchant.profilePitcher || "",
+    frontendDomainUrl: merchant.frontendDomainUrl,
+    gender: merchant.gender,
+    dateOfBirth: merchant.dateOfBirth || null,
+    countryCode: merchant.countryCode,
+    contactNumber: merchant.contactNumber,
+    businessType: merchant.businessType,
+    isActive: merchant.isActive !== false,
+    isOwnerEmailVerified: merchant.isOwnerEmailVerified === true,
+    isPasswordSet: merchant.isPasswordSet === true,
+    tokenVersion: merchant.tokenVersion || 0,
+    createdAt: merchant.createdAt,
+    updatedAt: merchant.updatedAt,
+});
+
+export default getPublicOwner;
