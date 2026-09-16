@@ -126,6 +126,31 @@ const merchantSchema = new mongoose.Schema(
             type: Boolean,
             default: true,
         },
+        otp: {
+            type: String,
+            default: "",
+        },
+        otpExpiresAt: {
+            type: Date,
+            default: null,
+        },
+        isOwnerEmailVerified: {
+            type: Boolean,
+            default: false,
+        },
+        password: {
+            type: String,
+            default: "",
+            select: false,
+        },
+        isPasswordSet: {
+            type: Boolean,
+            default: false,
+        },
+        tokenVersion: {
+            type: Number,
+            default: 0,
+        },
         createdBy: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "superadmin",

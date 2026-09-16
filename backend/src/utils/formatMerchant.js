@@ -23,6 +23,8 @@ const formatMerchant = (merchant) => ({
     postalCode: merchant.postalCode || "",
     businessType: merchant.businessType,
     isActive: merchant.isActive !== false,
+    isOwnerEmailVerified: merchant.isOwnerEmailVerified === true,
+    otpExpiresAt: merchant.otpExpiresAt || null,
     createdBy: merchant.createdBy || null,
     createdAt: merchant.createdAt,
     updatedAt: merchant.updatedAt,

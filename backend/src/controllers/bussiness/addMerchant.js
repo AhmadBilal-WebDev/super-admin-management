@@ -6,6 +6,12 @@ import toBussinessSlug from "../../utils/toBussinessSlug.js";
 import { normalizeCnic, isValidCnic } from "../../utils/cnic.js";
 import { getSidebarForUser } from "../../constants/sidebarCatalog.js";
 import { grantSidebarPath } from "../../utils/grantSidebarPath.js";
+import bcrypt from "bcryptjs";
+import sendOtpEmail from "../../utils/sendOtpEmail.js";
+import {
+    MERCHANT_OTP_EXPIRY_MS,
+    MERCHANT_OTP_VALIDITY_TEXT,
+} from "../../constants/otpExpiry.js";
 
 const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
@@ -181,6 +187,10 @@ const addMerchant = async (req, res) => {
             });
         }
 
+        const otp = String(Math.floor(100000 + Math.random() * 900000));
+        const hashedOtp = await bcrypt.hash(otp, 10);
+        const otpExpiresAt = new Date(Date.now() + MERCHANT_OTP_EXPIRY_MS);
+
         const merchant = await Merchant.create({
             bussinessId: parentBussiness._id,
             name: trimmedName,
@@ -208,6 +218,9 @@ const addMerchant = async (req, res) => {
             postalCode: postalCode ? String(postalCode).trim() : "",
             businessType: String(businessType).trim(),
             isActive: true,
+            otp: hashedOtp,
+            otpExpiresAt,
+            isOwnerEmailVerified: false,
             createdBy: req.user._id,
         });
 
@@ -217,15 +230,25 @@ const addMerchant = async (req, res) => {
             merchant._id,
         ]);
 
+        await sendOtpEmail({
+            to: merchant.ownerEmail,
+            otp,
+            name: merchant.ownerFirstName,
+            subject: "Super Admin Management - Merchant Owner Verification OTP",
+            subtitle: "Merchant Account Verification",
+            message: `Your merchant <strong>${merchant.name}</strong> has been created under <strong>${parentBussiness.name}</strong>. Use this 6-digit OTP to verify your owner email. This code is valid for <strong>${MERCHANT_OTP_VALIDITY_TEXT}</strong>.`,
+        });
+
         return res.status(201).json({
             success: true,
-            message: "Merchant added successfully",
+            message: "Merchant added successfully. OTP sent to owner email",
             bussiness: {
                 id: parentBussiness._id,
                 name: parentBussiness.name,
                 slug: parentBussiness.slug || "",
             },
             merchant: formatMerchant(merchant),
+            otpExpiresAt,
             sidebar: await getSidebarForUser(req.user),
         });
     } catch (error) {
