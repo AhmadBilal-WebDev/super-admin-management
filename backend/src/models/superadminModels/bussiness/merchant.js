@@ -147,6 +147,10 @@ const merchantSchema = new mongoose.Schema(
             type: Boolean,
             default: false,
         },
+        passwordResetAllowedUntil: {
+            type: Date,
+            default: null,
+        },
         tokenVersion: {
             type: Number,
             default: 0,

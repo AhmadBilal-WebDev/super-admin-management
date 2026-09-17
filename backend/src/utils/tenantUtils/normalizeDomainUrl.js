@@ -6,21 +6,35 @@ const normalizeDomainUrl = (url) => {
     return trimmed.startsWith("http") ? trimmed : `https://${trimmed}`;
 };
 
-const getDomainHost = (url) => {
+const getDomainKey = (url) => {
     try {
         const parsed = new URL(normalizeDomainUrl(url));
-        return parsed.hostname.replace(/^www\./i, "").toLowerCase();
+        const hostname = parsed.hostname.replace(/^www\./i, "").toLowerCase();
+        const port = parsed.port || "";
+
+        // host + port so localhost:3000 !== localhost:1000
+        return port ? `${hostname}:${port}` : hostname;
     } catch {
-        return String(url || "")
+        const raw = String(url || "")
             .trim()
             .replace(/^https?:\/\//i, "")
             .replace(/^www\./i, "")
             .split("/")[0]
             .toLowerCase();
+
+        return raw;
     }
 };
 
-const domainsMatch = (storedUrl, requestUrl) =>
-    getDomainHost(storedUrl) === getDomainHost(requestUrl);
+const domainsMatch = (storedUrl, requestUrl) => {
+    const stored = getDomainKey(storedUrl);
+    const requested = getDomainKey(requestUrl);
 
-export { normalizeDomainUrl, getDomainHost, domainsMatch };
+    if (!stored || !requested) {
+        return false;
+    }
+
+    return stored === requested;
+};
+
+export { normalizeDomainUrl, getDomainKey, domainsMatch };
