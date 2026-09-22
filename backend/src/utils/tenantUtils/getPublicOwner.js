@@ -18,6 +18,7 @@ const getPublicOwner = (merchant) => ({
     isOwnerEmailVerified: merchant.isOwnerEmailVerified === true,
     isPasswordSet: merchant.isPasswordSet === true,
     tokenVersion: merchant.tokenVersion || 0,
+    allowedSidebar: merchant.allowedSidebar || [],
     createdAt: merchant.createdAt,
     updatedAt: merchant.updatedAt,
 });

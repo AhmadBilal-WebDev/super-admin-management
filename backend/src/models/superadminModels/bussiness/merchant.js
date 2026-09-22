@@ -155,6 +155,10 @@ const merchantSchema = new mongoose.Schema(
             type: Number,
             default: 0,
         },
+        allowedSidebar: {
+            type: [mongoose.Schema.Types.Mixed],
+            default: [],
+        },
         createdBy: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "superadmin",

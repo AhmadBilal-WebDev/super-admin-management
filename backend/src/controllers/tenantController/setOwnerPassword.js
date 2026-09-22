@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import findOwnerMerchant from "../../utils/tenantUtils/findOwnerMerchant.js";
 import getPublicOwner from "../../utils/tenantUtils/getPublicOwner.js";
 import { createOwnerToken } from "../../utils/tenantUtils/ownerAuthToken.js";
+import { getRestaurantSidebarForUser } from "../../constants/restaurantConstant/sidebarCatalog.js";
 
 const setOwnerPassword = async (req, res) => {
     try {
@@ -60,6 +61,7 @@ const setOwnerPassword = async (req, res) => {
             message: "Password set successfully. Owner login successful",
             token,
             owner: ownerPayload,
+            sidebar: getRestaurantSidebarForUser(merchant),
         });
     } catch (error) {
         console.error("Set owner password error:", error);

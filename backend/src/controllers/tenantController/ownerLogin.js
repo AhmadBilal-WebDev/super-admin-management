@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import findOwnerMerchant from "../../utils/tenantUtils/findOwnerMerchant.js";
 import getPublicOwner from "../../utils/tenantUtils/getPublicOwner.js";
 import { createOwnerToken } from "../../utils/tenantUtils/ownerAuthToken.js";
+import { getRestaurantSidebarForUser } from "../../constants/restaurantConstant/sidebarCatalog.js";
 
 const ownerLogin = async (req, res) => {
     try {
@@ -111,6 +112,7 @@ const ownerLogin = async (req, res) => {
             message: "Owner login successful",
             token,
             owner: ownerPayload,
+            sidebar: getRestaurantSidebarForUser(merchant),
         });
     } catch (error) {
         console.error("Owner login error:", error);
