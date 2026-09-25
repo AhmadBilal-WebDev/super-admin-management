@@ -1,8 +1,8 @@
-import Merchant from "../../models/superadminModels/bussiness/merchant.js";
-import findBussiness from "../../utils/superadminUtils/findBussiness.js";
-import toBussinessSlug from "../../utils/superadminUtils/toBussinessSlug.js";
-import { normalizeCnic, isValidCnic } from "../../utils/superadminUtils/cnic.js";
-import { normalizeDomainUrl } from "../../utils/tenantUtils/normalizeDomainUrl.js";
+import Merchant from "../../../models/superadminModels/bussiness/merchant.js";
+import findBussiness from "../../../utils/superadminUtils/findBussiness.js";
+import toBussinessSlug from "../../../utils/superadminUtils/toBussinessSlug.js";
+import { normalizeCnic, isValidCnic } from "../../../utils/superadminUtils/cnic.js";
+import { normalizeDomainUrl } from "../../../utils/tenantUtils/normalizeDomainUrl.js";
 
 const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 

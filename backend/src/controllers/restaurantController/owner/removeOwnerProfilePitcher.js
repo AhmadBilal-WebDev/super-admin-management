@@ -1,6 +1,6 @@
-import deleteCloudinaryImage from "../../utils/superadminUtils/deleteCloudinaryImage.js";
-import Merchant from "../../models/superadminModels/bussiness/merchant.js";
-import getPublicOwner from "../../utils/tenantUtils/getPublicOwner.js";
+import deleteCloudinaryImage from "../../../utils/superadminUtils/deleteCloudinaryImage.js";
+import Merchant from "../../../models/superadminModels/bussiness/merchant.js";
+import getPublicOwner from "../../../utils/tenantUtils/getPublicOwner.js";
 
 const removeOwnerProfilePitcher = async (req, res) => {
     try {

@@ -1,5 +1,5 @@
 import bcrypt from "bcryptjs";
-import Merchant from "../../models/superadminModels/bussiness/merchant.js";
+import Merchant from "../../../models/superadminModels/bussiness/merchant.js";
 
 const updateOwnerPassword = async (req, res) => {
     try {

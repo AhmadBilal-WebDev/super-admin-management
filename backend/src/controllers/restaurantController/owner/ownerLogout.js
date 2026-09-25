@@ -1,8 +1,8 @@
-import RevokedOwnerToken from "../../models/restaurantModels/revokedOwnerToken.js";
+import RevokedOwnerToken from "../../../models/restaurantModels/revokedOwnerToken.js";
 import {
     getOwnerTokenKey,
     getOwnerTokenExpiryDate,
-} from "../../utils/tenantUtils/ownerAuthToken.js";
+} from "../../../utils/tenantUtils/ownerAuthToken.js";
 
 const ownerLogout = async (req, res) => {
     try {

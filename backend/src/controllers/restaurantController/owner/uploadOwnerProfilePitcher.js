@@ -1,8 +1,8 @@
 import fs from "fs";
-import cloudinary from "../../utils/superadminUtils/cloudinary.js";
-import deleteCloudinaryImage from "../../utils/superadminUtils/deleteCloudinaryImage.js";
-import Merchant from "../../models/superadminModels/bussiness/merchant.js";
-import getPublicOwner from "../../utils/tenantUtils/getPublicOwner.js";
+import cloudinary from "../../../utils/superadminUtils/cloudinary.js";
+import deleteCloudinaryImage from "../../../utils/superadminUtils/deleteCloudinaryImage.js";
+import Merchant from "../../../models/superadminModels/bussiness/merchant.js";
+import getPublicOwner from "../../../utils/tenantUtils/getPublicOwner.js";
 
 const uploadOwnerProfilePitcher = async (req, res) => {
     try {

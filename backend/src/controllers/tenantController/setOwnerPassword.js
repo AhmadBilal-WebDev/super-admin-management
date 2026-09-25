@@ -1,7 +1,9 @@
 import bcrypt from "bcryptjs";
-import findOwnerMerchant from "../../utils/tenantUtils/findOwnerMerchant.js";
+import findRestaurantAccount from "../../utils/tenantUtils/findRestaurantAccount.js";
 import getPublicOwner from "../../utils/tenantUtils/getPublicOwner.js";
+import getPublicStaff from "../../utils/restaurantUtils/getPublicStaff.js";
 import { createOwnerToken } from "../../utils/tenantUtils/ownerAuthToken.js";
+import { createStaffToken } from "../../utils/restaurantUtils/staffAuthToken.js";
 import { getRestaurantSidebarForUser } from "../../constants/restaurantConstant/sidebarCatalog.js";
 
 const setOwnerPassword = async (req, res) => {
@@ -30,7 +32,10 @@ const setOwnerPassword = async (req, res) => {
             });
         }
 
-        const { merchant, error } = await findOwnerMerchant(email, frontendDomainUrl);
+        const { accountType, merchant, staff, error } = await findRestaurantAccount(
+            email,
+            frontendDomainUrl
+        );
 
         if (error) {
             return res.status(error.status).json({
@@ -39,32 +44,60 @@ const setOwnerPassword = async (req, res) => {
             });
         }
 
-        if (merchant.isOwnerEmailVerified !== true) {
+        if (accountType === "owner") {
+            if (merchant.isOwnerEmailVerified !== true) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Please verify your email with OTP first",
+                });
+            }
+
+            merchant.password = await bcrypt.hash(password, 10);
+            merchant.isPasswordSet = true;
+            merchant.otp = "";
+            merchant.otpExpiresAt = null;
+            await merchant.save();
+
+            const { token } = createOwnerToken(merchant);
+
+            return res.status(200).json({
+                success: true,
+                accountType: "owner",
+                nextStep: "dashboard",
+                message: "Password set successfully. Owner login successful",
+                token,
+                owner: getPublicOwner(merchant),
+                sidebar: getRestaurantSidebarForUser(merchant),
+            });
+        }
+
+        if (staff.isEmailVerified !== true) {
             return res.status(400).json({
                 success: false,
                 message: "Please verify your email with OTP first",
             });
         }
 
-        merchant.password = await bcrypt.hash(password, 10);
-        merchant.isPasswordSet = true;
-        merchant.otp = "";
-        merchant.otpExpiresAt = null;
-        await merchant.save();
+        staff.password = await bcrypt.hash(password, 10);
+        staff.isPasswordSet = true;
+        staff.otp = "";
+        staff.otpExpiresAt = null;
+        staff.tokenVersion = (staff.tokenVersion || 0) + 1;
+        await staff.save();
 
-        const ownerPayload = getPublicOwner(merchant);
-        const { token } = createOwnerToken(merchant);
+        const { token } = createStaffToken(staff);
 
         return res.status(200).json({
             success: true,
+            accountType: "staff",
             nextStep: "dashboard",
-            message: "Password set successfully. Owner login successful",
+            message: "Password set successfully. Staff login successful",
             token,
-            owner: ownerPayload,
-            sidebar: getRestaurantSidebarForUser(merchant),
+            staff: getPublicStaff(staff),
+            sidebar: getRestaurantSidebarForUser(staff),
         });
     } catch (error) {
-        console.error("Set owner password error:", error);
+        console.error("Set password error:", error);
         return res.status(500).json({
             success: false,
             message: error.message || "Server error",

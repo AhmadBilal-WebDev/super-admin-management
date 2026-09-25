@@ -1,4 +1,4 @@
-import findBussiness from "../../utils/superadminUtils/findBussiness.js";
+import findBussiness from "../../../utils/superadminUtils/findBussiness.js";
 
 const getOwnerProfile = async (req, res) => {
     try {
