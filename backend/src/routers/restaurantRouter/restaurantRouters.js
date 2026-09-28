@@ -10,6 +10,11 @@ import uploadOwnerProfilePitcher from "../../controllers/restaurantController/ow
 import removeOwnerProfilePitcher from "../../controllers/restaurantController/owner/removeOwnerProfilePitcher.js";
 import ownerLogout from "../../controllers/restaurantController/owner/ownerLogout.js";
 import createStaffRole from "../../controllers/restaurantController/staff/createStaffRole.js";
+import getStaffRoles from "../../controllers/restaurantController/staff/getStaffRoles.js";
+import updateStaffRole from "../../controllers/restaurantController/staff/updateStaffRole.js";
+import blockStaffRole from "../../controllers/restaurantController/staff/blockStaffRole.js";
+import activateStaffRole from "../../controllers/restaurantController/staff/activateStaffRole.js";
+import deleteStaffRole from "../../controllers/restaurantController/staff/deleteStaffRole.js";
 
 const router = express.Router();
 
@@ -33,6 +38,11 @@ router.delete(
     removeOwnerProfilePitcher
 );
 
+router.get("/staff/roles", ownerAuthMiddleware, getStaffRoles);
 router.post("/staff/create-role", ownerAuthMiddleware, createStaffRole);
+router.put("/staff/update-role/:id", ownerAuthMiddleware, updateStaffRole);
+router.put("/staff/block-role/:id", ownerAuthMiddleware, blockStaffRole);
+router.put("/staff/activate-role/:id", ownerAuthMiddleware, activateStaffRole);
+router.delete("/staff/delete-role/:id", ownerAuthMiddleware, deleteStaffRole);
 
 export default router;

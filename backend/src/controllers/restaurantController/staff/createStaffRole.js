@@ -2,7 +2,11 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import Staff from "../../../models/restaurantModels/staff.js";
 import Merchant from "../../../models/superadminModels/bussiness/merchant.js";
-import hasRestaurantSidebarButton from "../../../utils/restaurantUtils/hasSidebarButton.js";
+import {
+    canCreateStaff,
+    assertOwnerDomain,
+    getFrontendDomainFromRequest,
+} from "../../../utils/restaurantUtils/findManageableStaff.js";
 import { assertPermissionsWithinOwner } from "../../../utils/restaurantUtils/assertPermissionsWithinOwner.js";
 import getPublicStaff from "../../../utils/restaurantUtils/getPublicStaff.js";
 import sendOtpEmail from "../../../utils/superadminUtils/sendOtpEmail.js";
@@ -18,10 +22,22 @@ const createStaffRole = async (req, res) => {
     try {
         const owner = req.owner;
 
-        if (!hasRestaurantSidebarButton(owner, "staffroles", "create-staff")) {
+        if (!canCreateStaff(owner)) {
             return res.status(403).json({
                 success: false,
                 message: "You are not allowed to create staff roles",
+            });
+        }
+
+        const domainCheck = assertOwnerDomain(
+            owner,
+            getFrontendDomainFromRequest(req)
+        );
+
+        if (domainCheck.error) {
+            return res.status(domainCheck.error.status).json({
+                success: false,
+                message: domainCheck.error.message,
             });
         }
 
