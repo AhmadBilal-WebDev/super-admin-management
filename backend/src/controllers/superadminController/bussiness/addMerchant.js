@@ -12,6 +12,10 @@ import {
     MERCHANT_OTP_EXPIRY_MS,
     MERCHANT_OTP_VALIDITY_TEXT,
 } from "../../../constants/superadminConstants/otpExpiry.js";
+import {
+    normalizeCurrencyCode,
+    CURRENCY_CODES,
+} from "../../../constants/superadminConstants/currencies.js";
 
 const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
@@ -74,6 +78,7 @@ const addMerchant = async (req, res) => {
             district,
             postalCode,
             businessType,
+            currency,
         } = req.body;
 
         const requiredFields = {
@@ -92,6 +97,7 @@ const addMerchant = async (req, res) => {
             city,
             district,
             businessType,
+            currency,
         };
 
         const missingField = Object.entries(requiredFields).find(
@@ -136,6 +142,15 @@ const addMerchant = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: "Invalid frontend domain URL",
+            });
+        }
+
+        const normalizedCurrency = normalizeCurrencyCode(currency);
+
+        if (!normalizedCurrency) {
+            return res.status(400).json({
+                success: false,
+                message: `Invalid currency. Allowed: ${CURRENCY_CODES.join(", ")}`,
             });
         }
 
@@ -217,6 +232,7 @@ const addMerchant = async (req, res) => {
             district: String(district).trim(),
             postalCode: postalCode ? String(postalCode).trim() : "",
             businessType: String(businessType).trim(),
+            currency: normalizedCurrency,
             isActive: true,
             otp: hashedOtp,
             otpExpiresAt,

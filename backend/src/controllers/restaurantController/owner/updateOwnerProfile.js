@@ -3,6 +3,7 @@ import findBussiness from "../../../utils/superadminUtils/findBussiness.js";
 import toBussinessSlug from "../../../utils/superadminUtils/toBussinessSlug.js";
 import { normalizeCnic, isValidCnic } from "../../../utils/superadminUtils/cnic.js";
 import { normalizeDomainUrl } from "../../../utils/tenantUtils/normalizeDomainUrl.js";
+import { formatCurrencyFields } from "../../../constants/superadminConstants/currencies.js";
 
 const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
@@ -39,6 +40,7 @@ const formatOwnerProfile = (merchant) => ({
     district: merchant.district || "",
     postalCode: merchant.postalCode || "",
     businessType: merchant.businessType || "",
+    ...formatCurrencyFields(merchant.currency),
     isActive: merchant.isActive !== false,
     isOwnerEmailVerified: merchant.isOwnerEmailVerified === true,
     isPasswordSet: merchant.isPasswordSet === true,

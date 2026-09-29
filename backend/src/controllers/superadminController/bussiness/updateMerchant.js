@@ -6,6 +6,10 @@ import hasSidebarButton from "../../../utils/superadminUtils/hasSidebarButton.js
 import toBussinessSlug from "../../../utils/superadminUtils/toBussinessSlug.js";
 import { normalizeCnic, isValidCnic } from "../../../utils/superadminUtils/cnic.js";
 import { getSidebarForUser } from "../../../constants/superadminConstants/sidebarCatalog.js";
+import {
+    normalizeCurrencyCode,
+    CURRENCY_CODES,
+} from "../../../constants/superadminConstants/currencies.js";
 
 const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
@@ -73,6 +77,7 @@ const updateMerchant = async (req, res) => {
             district,
             postalCode,
             businessType,
+            currency,
             isActive,
         } = req.body;
 
@@ -258,6 +263,19 @@ const updateMerchant = async (req, res) => {
 
         if (businessType !== undefined) {
             update.businessType = String(businessType).trim();
+        }
+
+        if (currency !== undefined) {
+            const normalizedCurrency = normalizeCurrencyCode(currency);
+
+            if (!normalizedCurrency) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Invalid currency. Allowed: ${CURRENCY_CODES.join(", ")}`,
+                });
+            }
+
+            update.currency = normalizedCurrency;
         }
 
         if (isActive !== undefined) {

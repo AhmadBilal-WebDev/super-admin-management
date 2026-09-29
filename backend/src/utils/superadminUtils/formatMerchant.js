@@ -1,3 +1,5 @@
+import { formatCurrencyFields } from "../../constants/superadminConstants/currencies.js";
+
 const formatMerchant = (merchant) => ({
     id: merchant._id,
     bussinessId: merchant.bussinessId,
@@ -22,6 +24,7 @@ const formatMerchant = (merchant) => ({
     district: merchant.district,
     postalCode: merchant.postalCode || "",
     businessType: merchant.businessType,
+    ...formatCurrencyFields(merchant.currency),
     isActive: merchant.isActive !== false,
     isOwnerEmailVerified: merchant.isOwnerEmailVerified === true,
     otpExpiresAt: merchant.otpExpiresAt || null,

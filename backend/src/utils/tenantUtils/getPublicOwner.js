@@ -1,3 +1,5 @@
+import { formatCurrencyFields } from "../../constants/superadminConstants/currencies.js";
+
 const getPublicOwner = (merchant) => ({
     id: merchant._id,
     bussinessId: merchant.bussinessId,
@@ -14,6 +16,7 @@ const getPublicOwner = (merchant) => ({
     countryCode: merchant.countryCode,
     contactNumber: merchant.contactNumber,
     businessType: merchant.businessType,
+    ...formatCurrencyFields(merchant.currency),
     isActive: merchant.isActive !== false,
     isOwnerEmailVerified: merchant.isOwnerEmailVerified === true,
     isPasswordSet: merchant.isPasswordSet === true,

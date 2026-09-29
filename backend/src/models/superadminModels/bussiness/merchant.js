@@ -122,6 +122,13 @@ const merchantSchema = new mongoose.Schema(
             required: true,
             trim: true,
         },
+        currency: {
+            type: String,
+            required: true,
+            uppercase: true,
+            trim: true,
+            default: "PKR",
+        },
         isActive: {
             type: Boolean,
             default: true,

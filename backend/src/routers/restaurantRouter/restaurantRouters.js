@@ -9,6 +9,7 @@ import updateOwnerPassword from "../../controllers/restaurantController/owner/up
 import uploadOwnerProfilePitcher from "../../controllers/restaurantController/owner/uploadOwnerProfilePitcher.js";
 import removeOwnerProfilePitcher from "../../controllers/restaurantController/owner/removeOwnerProfilePitcher.js";
 import ownerLogout from "../../controllers/restaurantController/owner/ownerLogout.js";
+import getOwnerBranches from "../../controllers/restaurantController/owner/getOwnerBranches.js";
 import createStaffRole from "../../controllers/restaurantController/staff/createStaffRole.js";
 import getStaffRoles from "../../controllers/restaurantController/staff/getStaffRoles.js";
 import updateStaffRole from "../../controllers/restaurantController/staff/updateStaffRole.js";
@@ -24,6 +25,7 @@ router.get("/owner/profile", ownerAuthMiddleware, getOwnerProfile);
 router.put("/owner/update-profile", ownerAuthMiddleware, updateOwnerProfile);
 router.put("/owner/update-password", ownerAuthMiddleware, updateOwnerPassword);
 router.post("/owner/logout", ownerAuthMiddleware, ownerLogout);
+router.get("/owner/branches", ownerAuthMiddleware, getOwnerBranches);
 
 router.post(
     "/owner/upload-profilepitcher",

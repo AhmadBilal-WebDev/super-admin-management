@@ -1,4 +1,5 @@
 import findBussiness from "../../../utils/superadminUtils/findBussiness.js";
+import { formatCurrencyFields } from "../../../constants/superadminConstants/currencies.js";
 
 const getOwnerProfile = async (req, res) => {
     try {
@@ -33,6 +34,7 @@ const getOwnerProfile = async (req, res) => {
                 district: merchant.district || "",
                 postalCode: merchant.postalCode || "",
                 businessType: merchant.businessType || "",
+                ...formatCurrencyFields(merchant.currency),
                 isActive: merchant.isActive !== false,
                 isOwnerEmailVerified: merchant.isOwnerEmailVerified === true,
                 isPasswordSet: merchant.isPasswordSet === true,
