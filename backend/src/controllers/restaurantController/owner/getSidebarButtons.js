@@ -6,7 +6,9 @@ import {
 const getSidebarButtons = async (req, res) => {
     try {
         const account =
-            req.accountType === "staff" && req.staff ? req.staff : req.owner;
+            req.accountType === "staff" && req.staff
+                ? { ...(typeof req.staff.toObject === "function" ? req.staff.toObject() : req.staff), accountType: "staff" }
+                : req.owner;
         const sidebar = getRestaurantSidebarForUser(account);
         const catalog = getFullRestaurantSidebar();
 

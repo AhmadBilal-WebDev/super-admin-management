@@ -1,17 +1,26 @@
 import Staff from "../../models/restaurantModels/staff.js";
-import hasRestaurantSidebarButton, {
-    hasRestaurantSidebarPath,
-} from "./hasSidebarButton.js";
+import { hasRestaurantSidebarPath } from "./hasSidebarButton.js";
 import { domainsMatch } from "../tenantUtils/normalizeDomainUrl.js";
 
 const canViewAllStaff = (owner) =>
-    hasRestaurantSidebarButton(owner, "staffroles", "all-staff");
+    hasRestaurantSidebarPath(
+        owner,
+        "branchmanagement",
+        "staffroles",
+        "all-staff"
+    ) || hasRestaurantSidebarPath(owner, "branchmanagement", "staffroles");
 
 const canCreateStaff = (owner) =>
-    hasRestaurantSidebarButton(owner, "staffroles", "create-staff");
+    hasRestaurantSidebarPath(
+        owner,
+        "branchmanagement",
+        "staffroles",
+        "create-staff"
+    ) || hasRestaurantSidebarPath(owner, "branchmanagement", "staffroles");
 
 const canAccessStaffRoles = (owner) =>
-    hasRestaurantSidebarPath(owner, "staffroles");
+    hasRestaurantSidebarPath(owner, "branchmanagement", "staffroles") ||
+    hasRestaurantSidebarPath(owner, "branchmanagement");
 
 const getFrontendDomainFromRequest = (req) =>
     req.body?.frontendDomainUrl || req.query?.frontendDomainUrl || "";

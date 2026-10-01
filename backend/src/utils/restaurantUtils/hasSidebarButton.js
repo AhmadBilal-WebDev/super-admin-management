@@ -1,10 +1,28 @@
 import { toPermissionNodes } from "./permissionNode.js";
 
+const isStaffAccount = (userOrOwner) => {
+    if (!userOrOwner) {
+        return false;
+    }
+
+    if (userOrOwner.accountType === "staff") {
+        return true;
+    }
+
+    return Boolean(
+        userOrOwner.merchantId &&
+            userOrOwner.roleName != null &&
+            !userOrOwner.ownerEmail
+    );
+};
+
 const hasRestaurantSidebarPath = (userOrOwner, ...keys) => {
     const allowed = userOrOwner?.allowedSidebar || [];
 
+    // Owner with empty permissions = full access.
+    // Staff with empty permissions = no access.
     if (!allowed.length) {
-        return true;
+        return !isStaffAccount(userOrOwner);
     }
 
     let nodes = toPermissionNodes(allowed);
@@ -20,14 +38,14 @@ const hasRestaurantSidebarPath = (userOrOwner, ...keys) => {
             return true;
         }
 
-        nodes = node.buttons;
+        nodes = node.buttons || [];
     }
 
     return true;
 };
 
-const hasRestaurantSidebarButton = (userOrOwner, sectionKey, buttonKey) =>
-    hasRestaurantSidebarPath(userOrOwner, sectionKey, buttonKey);
+const hasRestaurantSidebarButton = (userOrOwner, ...keys) =>
+    hasRestaurantSidebarPath(userOrOwner, ...keys);
 
-export { hasRestaurantSidebarPath };
+export { hasRestaurantSidebarPath, isStaffAccount };
 export default hasRestaurantSidebarButton;

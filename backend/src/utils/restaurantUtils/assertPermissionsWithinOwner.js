@@ -1,16 +1,28 @@
-import { toPermissionNodes } from "./permissionNode.js";
 import {
     getRestaurantSidebarForUser,
     normalizeRestaurantPermissions,
 } from "../../constants/restaurantConstant/sidebarCatalog.js";
 
 const collectKeys = (nodes = [], keys = new Set()) => {
-    for (const node of toPermissionNodes(nodes)) {
-        keys.add(String(node.key));
-        if (node.buttons?.length) {
+    for (const node of nodes || []) {
+        if (!node) {
+            continue;
+        }
+
+        const key =
+            node.key !== undefined && node.key !== null
+                ? String(node.key).trim()
+                : "";
+
+        if (key) {
+            keys.add(key);
+        }
+
+        if (Array.isArray(node.buttons) && node.buttons.length) {
             collectKeys(node.buttons, keys);
         }
     }
+
     return keys;
 };
 
@@ -31,4 +43,4 @@ const assertPermissionsWithinOwner = (owner, permissions) => {
     return normalized;
 };
 
-export { assertPermissionsWithinOwner };
+export { assertPermissionsWithinOwner, collectKeys };
