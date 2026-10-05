@@ -16,6 +16,15 @@ import updateStaffRole from "../../controllers/restaurantController/staff/update
 import blockStaffRole from "../../controllers/restaurantController/staff/blockStaffRole.js";
 import activateStaffRole from "../../controllers/restaurantController/staff/activateStaffRole.js";
 import deleteStaffRole from "../../controllers/restaurantController/staff/deleteStaffRole.js";
+import uploadCatalogImage from "../../controllers/restaurantController/catalog/uploadCatalogImage.js";
+import createCategory from "../../controllers/restaurantController/catalog/createCategory.js";
+import getCategories from "../../controllers/restaurantController/catalog/getCategories.js";
+import updateCategory from "../../controllers/restaurantController/catalog/updateCategory.js";
+import deleteCategory from "../../controllers/restaurantController/catalog/deleteCategory.js";
+import createProduct from "../../controllers/restaurantController/catalog/createProduct.js";
+import getProducts from "../../controllers/restaurantController/catalog/getProducts.js";
+import updateProduct from "../../controllers/restaurantController/catalog/updateProduct.js";
+import deleteProduct from "../../controllers/restaurantController/catalog/deleteProduct.js";
 
 const router = express.Router();
 
@@ -46,5 +55,32 @@ router.put("/staff/update-role/:id", ownerAuthMiddleware, updateStaffRole);
 router.put("/staff/block-role/:id", ownerAuthMiddleware, blockStaffRole);
 router.put("/staff/activate-role/:id", ownerAuthMiddleware, activateStaffRole);
 router.delete("/staff/delete-role/:id", ownerAuthMiddleware, deleteStaffRole);
+
+// Image only — form-data
+router.post(
+    "/catalog/upload-image",
+    restaurantAuthMiddleware,
+    upload.fields([
+        { name: "image", maxCount: 1 },
+        { name: "img", maxCount: 1 },
+    ]),
+    uploadCatalogImage
+);
+
+// Category — raw JSON
+router.get("/catalog/categories", restaurantAuthMiddleware, getCategories);
+router.post("/catalog/categories", restaurantAuthMiddleware, createCategory);
+router.put("/catalog/categories/:id", restaurantAuthMiddleware, updateCategory);
+router.delete(
+    "/catalog/categories/:id",
+    restaurantAuthMiddleware,
+    deleteCategory
+);
+
+// Product — raw JSON (images via upload-image with type=product)
+router.get("/catalog/products", restaurantAuthMiddleware, getProducts);
+router.post("/catalog/products", restaurantAuthMiddleware, createProduct);
+router.put("/catalog/products/:id", restaurantAuthMiddleware, updateProduct);
+router.delete("/catalog/products/:id", restaurantAuthMiddleware, deleteProduct);
 
 export default router;

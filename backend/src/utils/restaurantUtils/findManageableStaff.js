@@ -22,8 +22,36 @@ const canAccessStaffRoles = (owner) =>
     hasRestaurantSidebarPath(owner, "branchmanagement", "staffroles") ||
     hasRestaurantSidebarPath(owner, "branchmanagement");
 
-const getFrontendDomainFromRequest = (req) =>
-    req.body?.frontendDomainUrl || req.query?.frontendDomainUrl || "";
+const pickRequestValue = (value) => {
+    if (value === undefined || value === null) {
+        return "";
+    }
+
+    if (Array.isArray(value)) {
+        return pickRequestValue(value[0]);
+    }
+
+    return String(value).trim();
+};
+
+const getFrontendDomainFromRequest = (req) => {
+    const candidates = [
+        req.body?.frontendDomainUrl,
+        req.body?.frontend_domain_url,
+        req.query?.frontendDomainUrl,
+        req.query?.frontend_domain_url,
+        req.headers?.["x-frontend-domain-url"],
+    ];
+
+    for (const candidate of candidates) {
+        const value = pickRequestValue(candidate);
+        if (value) {
+            return value;
+        }
+    }
+
+    return "";
+};
 
 const assertOwnerDomain = (owner, frontendDomainUrl) => {
     if (!frontendDomainUrl || !String(frontendDomainUrl).trim()) {
