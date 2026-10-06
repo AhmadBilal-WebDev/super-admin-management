@@ -7,6 +7,9 @@ import {
     assertCatalogPermission,
     parseBoolean,
     getCatalogActor,
+    getMerchantBranchNames,
+    normalizeBranchNameList,
+    resolveCatalogWriteScope,
 } from "../../../utils/restaurantUtils/catalogScope.js";
 import {
     assertOwnerDomain,
@@ -83,38 +86,70 @@ const updateProduct = async (req, res) => {
                 });
             }
 
-            const productIsPublic = product.showAllBranches === true;
             const categoryIsPublic = nextCategory.showAllBranches === true;
 
-            if (productIsPublic && !categoryIsPublic) {
-                return res.status(400).json({
-                    success: false,
-                    message:
-                        "Public product cannot move to a branch-specific category",
-                });
-            }
+            if (!categoryIsPublic) {
+                if (
+                    product.showAllBranches === true ||
+                    parseBoolean(req.body.showAllBranches, false)
+                ) {
+                    return res.status(400).json({
+                        success: false,
+                        message:
+                            "Category is not enabled for all branches. Product cannot be shown in all branches",
+                    });
+                }
 
-            if (
-                !productIsPublic &&
-                !categoryIsPublic &&
-                String(nextCategory.branchId) !== String(product.branchId)
-            ) {
-                return res.status(400).json({
-                    success: false,
-                    message:
-                        "Category branch must match the product branch",
-                });
+                update.showAllBranches = false;
+                update.branchId = nextCategory.branchId;
+                update.branchName = normalizeBranchNameList(
+                    nextCategory.branchName
+                );
             }
+            // Public category: keep current product branch scope unless body changes it
 
             update.categoryId = nextCategory._id;
+            category = nextCategory;
+        }
 
-            if (categoryIsPublic) {
-                update.showAllBranches = true;
-                update.branchId = null;
-                update.branchName = "";
+        if (
+            req.body.showAllBranches !== undefined &&
+            update.showAllBranches === undefined
+        ) {
+            const wantsAll = parseBoolean(req.body.showAllBranches, false);
+            const parent =
+                category || (await Category.findById(product.categoryId));
+
+            if (wantsAll && parent?.showAllBranches !== true) {
+                return res.status(400).json({
+                    success: false,
+                    message:
+                        "Category is not enabled for all branches. Product cannot be shown in all branches",
+                });
             }
 
-            category = nextCategory;
+            if (wantsAll) {
+                const branchNames = await getMerchantBranchNames(owner._id);
+                update.showAllBranches = true;
+                update.branchId = null;
+                update.branchName = branchNames;
+            } else {
+                const previousShowAll = req.body.showAllBranches;
+                req.body.showAllBranches = false;
+                const scope = await resolveCatalogWriteScope(req);
+                req.body.showAllBranches = previousShowAll;
+
+                if (scope.error) {
+                    return res.status(scope.error.status).json({
+                        success: false,
+                        message: scope.error.message,
+                    });
+                }
+
+                update.showAllBranches = false;
+                update.branchId = scope.branchId;
+                update.branchName = normalizeBranchNameList(scope.branchName);
+            }
         }
 
         if (req.body.name !== undefined) {

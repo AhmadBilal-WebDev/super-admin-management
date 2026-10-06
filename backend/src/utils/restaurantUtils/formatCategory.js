@@ -16,7 +16,11 @@ const formatCategory = (category, fullProducts = null) => {
         merchantId: category.merchantId,
         bussinessId: category.bussinessId,
         branchId: category.branchId || null,
-        branchName: category.branchName || "",
+        branchName: Array.isArray(category.branchName)
+            ? category.branchName
+            : category.branchName
+              ? [category.branchName]
+              : [],
         showAllBranches: category.showAllBranches === true,
         name: category.name,
         slug: category.slug || "",

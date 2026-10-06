@@ -52,24 +52,31 @@ const deleteCategory = async (req, res) => {
             });
         }
 
-        const productsCount = await Product.countDocuments({
+        const products = await Product.find({
             merchantId: owner._id,
             categoryId: category._id,
-        });
+        }).select("_id image");
 
-        if (productsCount > 0) {
-            return res.status(400).json({
-                success: false,
-                message: `Cannot delete category. ${productsCount} product(s) are linked to it`,
+        const productImages = products
+            .map((item) => item.image)
+            .filter(Boolean);
+        const deletedProductsCount = products.length;
+        const categoryImage = category.image || "";
+        const deleted = formatCategory(category);
+
+        if (deletedProductsCount > 0) {
+            await Product.deleteMany({
+                merchantId: owner._id,
+                categoryId: category._id,
             });
         }
 
-        const image = category.image || "";
-        const deleted = formatCategory(category);
-
         await category.deleteOne();
 
-        if (image) {
+        const imagesToCleanup = [...productImages];
+        if (categoryImage) imagesToCleanup.push(categoryImage);
+
+        for (const image of imagesToCleanup) {
             try {
                 await deleteCloudinaryImage(image);
             } catch (cloudinaryError) {
@@ -82,7 +89,11 @@ const deleteCategory = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            message: "Category deleted successfully",
+            message:
+                deletedProductsCount > 0
+                    ? `Category and ${deletedProductsCount} product(s) deleted successfully`
+                    : "Category deleted successfully",
+            deletedProductsCount,
             category: deleted,
         });
     } catch (error) {

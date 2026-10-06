@@ -108,7 +108,7 @@ const getProducts = async (req, res) => {
                       branchCode: scope.branch.branchCode,
                   }
                 : null,
-            availableTags: getCatalogTagCatalog(),
+            // availableTags: getCatalogTagCatalog(),
             products: products.map((product) =>
                 formatProduct(
                     product,

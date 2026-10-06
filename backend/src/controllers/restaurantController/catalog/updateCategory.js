@@ -1,4 +1,5 @@
 ﻿import Category from "../../../models/restaurantModels/category.js";
+import Product from "../../../models/restaurantModels/product.js";
 import toBussinessSlug from "../../../utils/superadminUtils/toBussinessSlug.js";
 import formatCategory from "../../../utils/restaurantUtils/formatCategory.js";
 import {
@@ -189,6 +190,47 @@ const updateCategory = async (req, res) => {
             new: true,
             runValidators: true,
         });
+
+        // If category becomes single-branch, force all its products to that branch.
+        // If category stays/becomes public, only refresh names on all-branch products.
+        if (
+            update.showAllBranches !== undefined ||
+            update.branchId !== undefined ||
+            update.branchName !== undefined
+        ) {
+            const nextBranchNames = Array.isArray(updated.branchName)
+                ? updated.branchName
+                : updated.branchName
+                  ? [updated.branchName]
+                  : [];
+
+            if (updated.showAllBranches === true) {
+                await Product.updateMany(
+                    {
+                        merchantId: owner._id,
+                        categoryId: updated._id,
+                        showAllBranches: true,
+                    },
+                    {
+                        $set: {
+                            branchId: null,
+                            branchName: nextBranchNames,
+                        },
+                    }
+                );
+            } else {
+                await Product.updateMany(
+                    { merchantId: owner._id, categoryId: updated._id },
+                    {
+                        $set: {
+                            showAllBranches: false,
+                            branchId: updated.branchId,
+                            branchName: nextBranchNames,
+                        },
+                    }
+                );
+            }
+        }
 
         return res.status(200).json({
             success: true,

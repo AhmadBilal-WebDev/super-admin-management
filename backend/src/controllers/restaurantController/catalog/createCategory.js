@@ -137,6 +137,7 @@ const createCategory = async (req, res) => {
                       branchCode: scope.branch.branchCode,
                   }
                 : null,
+            branchName: scope.branchName,
             showAllBranches: scope.showAllBranches,
             category: formatCategory(category),
         });

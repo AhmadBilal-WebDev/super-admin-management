@@ -8,7 +8,11 @@ const formatProduct = (product, category = null) => {
         merchantId: product.merchantId,
         bussinessId: product.bussinessId,
         branchId: product.branchId || null,
-        branchName: product.branchName || "",
+        branchName: Array.isArray(product.branchName)
+            ? product.branchName
+            : product.branchName
+              ? [product.branchName]
+              : [],
         showAllBranches: product.showAllBranches === true,
         categoryId: product.categoryId,
         category: category

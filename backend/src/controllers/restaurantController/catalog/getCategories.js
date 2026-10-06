@@ -118,7 +118,7 @@ const getCategories = async (req, res) => {
                       branchCode: scope.branch.branchCode,
                   }
                 : null,
-            availableTags: getCatalogTagCatalog(),
+            // availableTags: getCatalogTagCatalog(),
             categories: categories.map((category) =>
                 formatCategory(
                     category,

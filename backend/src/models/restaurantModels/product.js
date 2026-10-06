@@ -54,9 +54,8 @@ const productSchema = new mongoose.Schema(
             index: true,
         },
         branchName: {
-            type: String,
-            default: "",
-            trim: true,
+            type: [String],
+            default: [],
         },
         showAllBranches: {
             type: Boolean,

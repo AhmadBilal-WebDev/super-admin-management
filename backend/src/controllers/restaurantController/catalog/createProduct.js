@@ -8,6 +8,8 @@ import {
     parseBoolean,
     parseJsonField,
     resolveCatalogWriteScope,
+    getMerchantBranchNames,
+    normalizeBranchNameList,
 } from "../../../utils/restaurantUtils/catalogScope.js";
 import {
     normalizeCatalogTags,
@@ -221,29 +223,57 @@ const createProduct = async (req, res) => {
             });
         }
 
-        // Inherit branch scope from category when category is public for all branches
-        let productShowAll = scope.showAllBranches;
+        // Public category: product can be all-branches OR one branch.
+        // Branch-specific category: product cannot be all-branches.
+        let productShowAll = false;
         let productBranchId = scope.branchId;
-        let productBranchName = scope.branchName;
+        let productBranchName = normalizeBranchNameList(scope.branchName);
 
         if (category.showAllBranches === true) {
-            productShowAll = true;
-            productBranchId = null;
-            productBranchName = "";
-        } else {
-            // Category is branch-specific — product must stay in same branch
-            const categoryVisible =
-                scope.showAllBranches === true
-                    ? false
-                    : String(category.branchId) === String(scope.branchId);
+            if (scope.showAllBranches === true) {
+                productShowAll = true;
+                productBranchId = null;
+                productBranchName = await getMerchantBranchNames(
+                    scope.owner._id
+                );
 
+                if (!productBranchName.length) {
+                    productBranchName = normalizeBranchNameList(
+                        category.branchName
+                    );
+                }
+
+                if (productBranchName.length) {
+                    await Category.updateOne(
+                        { _id: category._id },
+                        { $set: { branchName: productBranchName } }
+                    );
+                }
+            } else {
+                // Public category + selected branch → product only for that branch
+                if (!scope.branchId) {
+                    return res.status(400).json({
+                        success: false,
+                        message:
+                            "Branch is required when product is not for all branches",
+                    });
+                }
+
+                productShowAll = false;
+                productBranchId = scope.branchId;
+                productBranchName = normalizeBranchNameList(scope.branchName);
+            }
+        } else {
             if (scope.showAllBranches === true) {
                 return res.status(400).json({
                     success: false,
                     message:
-                        "This category is branch-specific. Product cannot be set for all branches",
+                        "Category is not enabled for all branches. Product cannot be shown in all branches",
                 });
             }
+
+            const categoryVisible =
+                String(category.branchId) === String(scope.branchId);
 
             if (!categoryVisible) {
                 return res.status(400).json({
@@ -255,7 +285,11 @@ const createProduct = async (req, res) => {
 
             productShowAll = false;
             productBranchId = category.branchId;
-            productBranchName = category.branchName || scope.branchName;
+            productBranchName = normalizeBranchNameList(
+                category.branchName?.length
+                    ? category.branchName
+                    : scope.branchName
+            );
         }
 
         const trimmedName = String(name).trim();
@@ -424,11 +458,12 @@ const createProduct = async (req, res) => {
             message: "Product created successfully",
             frontendDomainUrl: scope.owner.frontendDomainUrl,
             showAllBranches: productShowAll,
+            branchName: productBranchName,
             branch: productShowAll
                 ? null
                 : {
                       id: productBranchId,
-                      name: productBranchName,
+                      name: productBranchName[0] || "",
                   },
             categoryProducts: (updatedCategory?.products || []).map((item) => ({
                 productId: item.productId,

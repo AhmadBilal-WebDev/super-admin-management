@@ -79,6 +79,34 @@ const assertCatalogPermission = (account, ...keys) => {
     return {};
 };
 
+const normalizeBranchNameList = (value) => {
+    if (value === undefined || value === null || value === "") return [];
+
+    const list = Array.isArray(value)
+        ? value
+        : typeof value === "string" && value.includes(",")
+          ? value.split(",")
+          : [value];
+
+    return [
+        ...new Set(
+            list
+                .map((item) => String(item || "").trim())
+                .filter(Boolean)
+        ),
+    ];
+};
+
+const getMerchantBranchNames = async (merchantId) => {
+    const branches = await Branch.find({ merchantId })
+        .select("name")
+        .sort({ name: 1 });
+
+    return branches
+        .map((branch) => String(branch.name || "").trim())
+        .filter(Boolean);
+};
+
 const resolveBranchForMerchant = async (owner, { branchId, branchName } = {}) => {
     if (branchId) {
         const branch = await Branch.findOne({
@@ -98,14 +126,16 @@ const resolveBranchForMerchant = async (owner, { branchId, branchName } = {}) =>
         return { branch };
     }
 
-    if (branchName && String(branchName).trim()) {
-        const nameKey = String(branchName).trim().toLowerCase();
+    const firstName = normalizeBranchNameList(branchName)[0];
+
+    if (firstName) {
+        const nameKey = firstName.toLowerCase();
         const branch = await Branch.findOne({
             merchantId: owner._id,
             $or: [
                 { nameKey },
-                { name: new RegExp(`^${String(branchName).trim()}$`, "i") },
-                { branchCode: String(branchName).trim().toUpperCase() },
+                { name: new RegExp(`^${firstName}$`, "i") },
+                { branchCode: firstName.toUpperCase() },
             ],
         });
 
@@ -145,6 +175,18 @@ const resolveCatalogWriteScope = async (req) => {
     const showAllBranches = parseBoolean(req.body?.showAllBranches, false);
 
     if (showAllBranches) {
+        const branchNames = await getMerchantBranchNames(owner._id);
+
+        if (!branchNames.length) {
+            return {
+                error: {
+                    status: 400,
+                    message:
+                        "No branches found for this restaurant. Add a branch first",
+                },
+            };
+        }
+
         return {
             owner,
             account,
@@ -153,7 +195,7 @@ const resolveCatalogWriteScope = async (req) => {
             showAllBranches: true,
             branch: null,
             branchId: null,
-            branchName: "",
+            branchName: branchNames,
         };
     }
 
@@ -183,7 +225,7 @@ const resolveCatalogWriteScope = async (req) => {
         showAllBranches: false,
         branch: branchResult.branch,
         branchId: branchResult.branch._id,
-        branchName: branchResult.branch.name,
+        branchName: normalizeBranchNameList(branchResult.branch.name),
     };
 };
 
@@ -263,6 +305,8 @@ export {
     parseJsonField,
     getCatalogActor,
     assertCatalogPermission,
+    normalizeBranchNameList,
+    getMerchantBranchNames,
     resolveCatalogWriteScope,
     resolveCatalogListScope,
     buildBranchVisibilityFilter,
