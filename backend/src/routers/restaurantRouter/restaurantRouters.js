@@ -25,6 +25,11 @@ import createProduct from "../../controllers/restaurantController/catalog/create
 import getProducts from "../../controllers/restaurantController/catalog/getProducts.js";
 import updateProduct from "../../controllers/restaurantController/catalog/updateProduct.js";
 import deleteProduct from "../../controllers/restaurantController/catalog/deleteProduct.js";
+import createBanner from "../../controllers/restaurantController/banner/createBanner.js";
+import getBanners from "../../controllers/restaurantController/banner/getBanners.js";
+import getPublicBanners from "../../controllers/restaurantController/banner/getPublicBanners.js";
+import updateBanner from "../../controllers/restaurantController/banner/updateBanner.js";
+import deleteBanner from "../../controllers/restaurantController/banner/deleteBanner.js";
 
 const router = express.Router();
 
@@ -82,5 +87,14 @@ router.get("/catalog/products", restaurantAuthMiddleware, getProducts);
 router.post("/catalog/products", restaurantAuthMiddleware, createProduct);
 router.put("/catalog/products/:id", restaurantAuthMiddleware, updateProduct);
 router.delete("/catalog/products/:id", restaurantAuthMiddleware, deleteProduct);
+
+// Banner — public (user site, no auth)
+router.get("/banner/public", getPublicBanners);
+
+// Banner — owner dashboard (auth)
+router.get("/banner", restaurantAuthMiddleware, getBanners);
+router.post("/banner", restaurantAuthMiddleware, createBanner);
+router.put("/banner/:id", restaurantAuthMiddleware, updateBanner);
+router.delete("/banner/:id", restaurantAuthMiddleware, deleteBanner);
 
 export default router;

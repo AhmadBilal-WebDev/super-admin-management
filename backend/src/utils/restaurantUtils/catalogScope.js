@@ -278,25 +278,16 @@ const resolveCatalogListScope = async (req) => {
 const buildBranchVisibilityFilter = ({ merchantId, branch, showAllOnly }) => {
     const filter = { merchantId };
 
-    if (showAllOnly === true) {
-        filter.showAllBranches = true;
+    // No branchName/branchId OR showAllBranches=true → all branches
+    if (showAllOnly === true || !branch) {
         return filter;
     }
 
-    if (showAllOnly === false && branch) {
-        filter.showAllBranches = false;
-        filter.branchId = branch._id;
-        return filter;
-    }
-
-    if (branch) {
-        filter.$or = [
-            { showAllBranches: true },
-            { showAllBranches: false, branchId: branch._id },
-        ];
-        return filter;
-    }
-
+    // Specific branch → public + that branch only
+    filter.$or = [
+        { showAllBranches: true },
+        { showAllBranches: false, branchId: branch._id },
+    ];
     return filter;
 };
 
@@ -307,6 +298,7 @@ export {
     assertCatalogPermission,
     normalizeBranchNameList,
     getMerchantBranchNames,
+    resolveBranchForMerchant,
     resolveCatalogWriteScope,
     resolveCatalogListScope,
     buildBranchVisibilityFilter,

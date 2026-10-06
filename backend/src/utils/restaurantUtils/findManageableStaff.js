@@ -38,9 +38,12 @@ const getFrontendDomainFromRequest = (req) => {
     const candidates = [
         req.body?.frontendDomainUrl,
         req.body?.frontend_domain_url,
+        req.body?.domain,
         req.query?.frontendDomainUrl,
         req.query?.frontend_domain_url,
+        req.query?.domain,
         req.headers?.["x-frontend-domain-url"],
+        req.headers?.domain,
     ];
 
     for (const candidate of candidates) {

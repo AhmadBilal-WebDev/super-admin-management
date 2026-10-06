@@ -12,6 +12,35 @@ import {
     cleanupUploadedFile,
 } from "../../../utils/restaurantUtils/uploadCatalogImage.js";
 
+const resolveUploadSection = (rawType) => {
+    const type = String(rawType || "category").trim().toLowerCase();
+
+    if (type === "product" || type === "products") {
+        return {
+            section: "products",
+            permission: ["catalog", "products"],
+            folder: "restaurant/catalog/products",
+            responseType: "product",
+        };
+    }
+
+    if (type === "banner" || type === "banners") {
+        return {
+            section: "banners",
+            permission: ["marketing", "banners"],
+            folder: "restaurant/banners",
+            responseType: "banner",
+        };
+    }
+
+    return {
+        section: "categories",
+        permission: ["catalog", "categories"],
+        folder: "restaurant/catalog/categories",
+        responseType: "category",
+    };
+};
+
 const uploadCatalogImage = async (req, res) => {
     const uploadedFile = getSingleUploadedFile(req);
 
@@ -31,18 +60,13 @@ const uploadCatalogImage = async (req, res) => {
             });
         }
 
-        const type = String(req.body?.type || req.query?.type || "category")
-            .trim()
-            .toLowerCase();
-        const section =
-            type === "product" || type === "products"
-                ? "products"
-                : "categories";
+        const uploadMeta = resolveUploadSection(
+            req.body?.type || req.query?.type
+        );
 
         const permissionCheck = assertCatalogPermission(
             account,
-            "catalog",
-            section
+            ...uploadMeta.permission
         );
 
         if (permissionCheck.error) {
@@ -61,17 +85,15 @@ const uploadCatalogImage = async (req, res) => {
             });
         }
 
-        const folder =
-            section === "products"
-                ? "restaurant/catalog/products"
-                : "restaurant/catalog/categories";
-
-        const imageUrl = await uploadImageToCloudinary(uploadedFile, folder);
+        const imageUrl = await uploadImageToCloudinary(
+            uploadedFile,
+            uploadMeta.folder
+        );
 
         return res.status(201).json({
             success: true,
             message: "Image uploaded successfully",
-            type: section === "products" ? "product" : "category",
+            type: uploadMeta.responseType,
             image: imageUrl,
             frontendDomainUrl: owner.frontendDomainUrl,
         });
