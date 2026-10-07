@@ -30,6 +30,7 @@ import getBanners from "../../controllers/restaurantController/banner/getBanners
 import getPublicBanners from "../../controllers/restaurantController/banner/getPublicBanners.js";
 import updateBanner from "../../controllers/restaurantController/banner/updateBanner.js";
 import deleteBanner from "../../controllers/restaurantController/banner/deleteBanner.js";
+import getPublicBranches from "../../controllers/restaurantController/user/getBranches/getPublicBranches.js";
 
 const router = express.Router();
 
@@ -40,6 +41,9 @@ router.put("/owner/update-profile", ownerAuthMiddleware, updateOwnerProfile);
 router.put("/owner/update-password", ownerAuthMiddleware, updateOwnerPassword);
 router.post("/owner/logout", ownerAuthMiddleware, ownerLogout);
 router.get("/owner/branches", ownerAuthMiddleware, getOwnerBranches);
+
+// Public branches — user site (no auth), filter by frontend domain
+router.get("/branches/public", getPublicBranches);
 
 router.post(
     "/owner/upload-profilepitcher",
