@@ -160,6 +160,20 @@ const resolveBranchForMerchant = async (owner, { branchId, branchName } = {}) =>
     };
 };
 
+// Prefer query/params, then body — domain/branch/showAllBranches via params
+const pickScopeField = (req, key) => {
+    if (req.query?.[key] !== undefined && req.query?.[key] !== "") {
+        return req.query[key];
+    }
+    if (req.params?.[key] !== undefined && req.params?.[key] !== "") {
+        return req.params[key];
+    }
+    if (req.body?.[key] !== undefined && req.body?.[key] !== "") {
+        return req.body[key];
+    }
+    return undefined;
+};
+
 const resolveCatalogWriteScope = async (req) => {
     const { owner, account, accountType, actorId } = getCatalogActor(req);
 
@@ -172,7 +186,10 @@ const resolveCatalogWriteScope = async (req) => {
         return domainCheck;
     }
 
-    const showAllBranches = parseBoolean(req.body?.showAllBranches, false);
+    const showAllBranches = parseBoolean(
+        pickScopeField(req, "showAllBranches"),
+        false
+    );
 
     if (showAllBranches) {
         const branchNames = await getMerchantBranchNames(owner._id);
@@ -200,8 +217,8 @@ const resolveCatalogWriteScope = async (req) => {
     }
 
     const branchResult = await resolveBranchForMerchant(owner, {
-        branchId: req.body?.branchId,
-        branchName: req.body?.branchName,
+        branchId: pickScopeField(req, "branchId"),
+        branchName: pickScopeField(req, "branchName"),
     });
 
     if (branchResult.error) {
@@ -241,14 +258,26 @@ const resolveCatalogListScope = async (req) => {
         return domainCheck;
     }
 
-    const branchId = req.query?.branchId || req.body?.branchId;
-    const branchName = req.query?.branchName || req.body?.branchName;
-    const showAllOnlyRaw = req.query?.showAllBranches;
-
+    const showAllOnlyRaw = pickScopeField(req, "showAllBranches");
     let showAllOnly = null;
     if (showAllOnlyRaw !== undefined) {
         showAllOnly = parseBoolean(showAllOnlyRaw, null);
     }
+
+    // showAllBranches=true → ignore branch filters, return all
+    if (showAllOnly === true) {
+        return {
+            owner,
+            account,
+            accountType,
+            actorId,
+            branch: null,
+            showAllOnly: true,
+        };
+    }
+
+    const branchId = pickScopeField(req, "branchId");
+    const branchName = pickScopeField(req, "branchName");
 
     let branch = null;
 

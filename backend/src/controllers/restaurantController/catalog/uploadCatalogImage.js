@@ -33,6 +33,20 @@ const resolveUploadSection = (rawType) => {
         };
     }
 
+    if (
+        type === "deal" ||
+        type === "deals" ||
+        type === "dealscombos" ||
+        type === "combo"
+    ) {
+        return {
+            section: "deals",
+            permission: ["catalog", "dealscombos"],
+            folder: "restaurant/catalog/deals",
+            responseType: "deal",
+        };
+    }
+
     return {
         section: "categories",
         permission: ["catalog", "categories"],
