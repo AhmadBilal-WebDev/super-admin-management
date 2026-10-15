@@ -3,14 +3,15 @@ import {
     canViewAllStaff,
     assertOwnerDomain,
     getFrontendDomainFromRequest,
+    getRestaurantActor,
 } from "../../../utils/restaurantUtils/findManageableStaff.js";
 import getPublicStaff from "../../../utils/restaurantUtils/getPublicStaff.js";
 
 const getStaffRoles = async (req, res) => {
     try {
-        const owner = req.owner;
+        const { actor, owner } = getRestaurantActor(req);
 
-        if (!canViewAllStaff(owner)) {
+        if (!canViewAllStaff(actor)) {
             return res.status(403).json({
                 success: false,
                 message: "You are not allowed to view staff roles",

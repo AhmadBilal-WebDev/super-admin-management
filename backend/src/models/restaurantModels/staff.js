@@ -106,6 +106,30 @@ const staffSchema = new mongoose.Schema(
             type: [mongoose.Schema.Types.Mixed],
             default: [],
         },
+        staffType: {
+            type: String,
+            enum: ["staff", "junior_owner"],
+            default: "staff",
+            index: true,
+        },
+        accessAllBranches: {
+            type: Boolean,
+            default: false,
+            index: true,
+        },
+        branchIds: {
+            type: [
+                {
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: "branch",
+                },
+            ],
+            default: [],
+        },
+        branchNames: {
+            type: [String],
+            default: [],
+        },
         otp: {
             type: String,
             default: "",
@@ -132,8 +156,35 @@ const staffSchema = new mongoose.Schema(
         },
         createdBy: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: "merchant",
             default: null,
+            index: true,
+        },
+        createdByType: {
+            type: String,
+            enum: ["owner", "staff"],
+            default: "owner",
+        },
+        createdByName: {
+            type: String,
+            default: "",
+            trim: true,
+        },
+        createdByRole: {
+            type: String,
+            default: "",
+            trim: true,
+        },
+        createdReason: {
+            type: String,
+            default: "",
+            trim: true,
+            maxlength: 500,
+        },
+        parentStaffId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "restaurantstaff",
+            default: null,
+            index: true,
         },
     },
     { timestamps: true }

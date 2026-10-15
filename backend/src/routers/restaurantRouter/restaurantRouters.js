@@ -41,11 +41,15 @@ const router = express.Router();
 
 router.get("/sidebar-buttons", restaurantAuthMiddleware, getSidebarButtons);
 
-router.get("/owner/profile", ownerAuthMiddleware, getOwnerProfile);
+// Profile / branches / logout — owner + staff
+router.get("/owner/profile", restaurantAuthMiddleware, getOwnerProfile);
+router.get("/profile", restaurantAuthMiddleware, getOwnerProfile);
 router.put("/owner/update-profile", ownerAuthMiddleware, updateOwnerProfile);
 router.put("/owner/update-password", ownerAuthMiddleware, updateOwnerPassword);
-router.post("/owner/logout", ownerAuthMiddleware, ownerLogout);
-router.get("/owner/branches", ownerAuthMiddleware, getOwnerBranches);
+router.post("/owner/logout", restaurantAuthMiddleware, ownerLogout);
+router.post("/logout", restaurantAuthMiddleware, ownerLogout);
+router.get("/owner/branches", restaurantAuthMiddleware, getOwnerBranches);
+router.get("/branches", restaurantAuthMiddleware, getOwnerBranches);
 
 // Public branches — user site (no auth), filter by frontend domain
 router.get("/branches/public", getPublicBranches);
@@ -63,12 +67,21 @@ router.delete(
     removeOwnerProfilePitcher
 );
 
-router.get("/staff/roles", ownerAuthMiddleware, getStaffRoles);
-router.post("/staff/create-role", ownerAuthMiddleware, createStaffRole);
-router.put("/staff/update-role/:id", ownerAuthMiddleware, updateStaffRole);
-router.put("/staff/block-role/:id", ownerAuthMiddleware, blockStaffRole);
-router.put("/staff/activate-role/:id", ownerAuthMiddleware, activateStaffRole);
-router.delete("/staff/delete-role/:id", ownerAuthMiddleware, deleteStaffRole);
+// Staff roles — owner OR staff with create-staff / all-staff permission
+router.get("/staff/roles", restaurantAuthMiddleware, getStaffRoles);
+router.post("/staff/create-role", restaurantAuthMiddleware, createStaffRole);
+router.put("/staff/update-role/:id", restaurantAuthMiddleware, updateStaffRole);
+router.put("/staff/block-role/:id", restaurantAuthMiddleware, blockStaffRole);
+router.put(
+    "/staff/activate-role/:id",
+    restaurantAuthMiddleware,
+    activateStaffRole
+);
+router.delete(
+    "/staff/delete-role/:id",
+    restaurantAuthMiddleware,
+    deleteStaffRole
+);
 
 // Image only — form-data
 router.post(

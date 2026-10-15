@@ -2,25 +2,48 @@ import Staff from "../../models/restaurantModels/staff.js";
 import { hasRestaurantSidebarPath } from "./hasSidebarButton.js";
 import { domainsMatch } from "../tenantUtils/normalizeDomainUrl.js";
 
-const canViewAllStaff = (owner) =>
+const getRestaurantActor = (req) => {
+    if (req.accountType === "staff" && req.staff) {
+        return {
+            accountType: "staff",
+            actor: {
+                ...(typeof req.staff.toObject === "function"
+                    ? req.staff.toObject()
+                    : req.staff),
+                accountType: "staff",
+            },
+            actorId: req.staff._id,
+            owner: req.owner,
+        };
+    }
+
+    return {
+        accountType: "owner",
+        actor: req.owner,
+        actorId: req.owner._id,
+        owner: req.owner,
+    };
+};
+
+const canViewAllStaff = (account) =>
     hasRestaurantSidebarPath(
-        owner,
+        account,
         "branchmanagement",
         "staffroles",
         "all-staff"
-    ) || hasRestaurantSidebarPath(owner, "branchmanagement", "staffroles");
+    ) || hasRestaurantSidebarPath(account, "branchmanagement", "staffroles");
 
-const canCreateStaff = (owner) =>
+const canCreateStaff = (account) =>
     hasRestaurantSidebarPath(
-        owner,
+        account,
         "branchmanagement",
         "staffroles",
         "create-staff"
-    ) || hasRestaurantSidebarPath(owner, "branchmanagement", "staffroles");
+    ) || hasRestaurantSidebarPath(account, "branchmanagement", "staffroles");
 
-const canAccessStaffRoles = (owner) =>
-    hasRestaurantSidebarPath(owner, "branchmanagement", "staffroles") ||
-    hasRestaurantSidebarPath(owner, "branchmanagement");
+const canAccessStaffRoles = (account) =>
+    hasRestaurantSidebarPath(account, "branchmanagement", "staffroles") ||
+    hasRestaurantSidebarPath(account, "branchmanagement");
 
 const pickRequestValue = (value) => {
     if (value === undefined || value === null) {
@@ -79,9 +102,9 @@ const assertOwnerDomain = (owner, frontendDomainUrl) => {
 };
 
 const findManageableStaff = async (req, staffId) => {
-    const owner = req.owner;
+    const { actor, owner, accountType, actorId } = getRestaurantActor(req);
 
-    if (!canViewAllStaff(owner) && !canAccessStaffRoles(owner)) {
+    if (!canViewAllStaff(actor) && !canAccessStaffRoles(actor)) {
         return {
             error: {
                 status: 403,
@@ -90,7 +113,10 @@ const findManageableStaff = async (req, staffId) => {
         };
     }
 
-    const domainCheck = assertOwnerDomain(owner, getFrontendDomainFromRequest(req));
+    const domainCheck = assertOwnerDomain(
+        owner,
+        getFrontendDomainFromRequest(req)
+    );
 
     if (domainCheck.error) {
         return domainCheck;
@@ -119,7 +145,17 @@ const findManageableStaff = async (req, staffId) => {
         };
     }
 
-    return { staff, owner };
+    // Staff cannot manage themselves via these admin endpoints
+    if (accountType === "staff" && String(staff._id) === String(actorId)) {
+        return {
+            error: {
+                status: 403,
+                message: "You cannot manage your own staff role here",
+            },
+        };
+    }
+
+    return { staff, owner, actor, accountType, actorId };
 };
 
 export {
@@ -128,5 +164,6 @@ export {
     canAccessStaffRoles,
     assertOwnerDomain,
     getFrontendDomainFromRequest,
+    getRestaurantActor,
 };
 export default findManageableStaff;

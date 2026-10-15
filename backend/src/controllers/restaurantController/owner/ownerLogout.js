@@ -3,9 +3,11 @@ import {
     getOwnerTokenKey,
     getOwnerTokenExpiryDate,
 } from "../../../utils/tenantUtils/ownerAuthToken.js";
+import { getRestaurantActor } from "../../../utils/restaurantUtils/findManageableStaff.js";
 
 const ownerLogout = async (req, res) => {
     try {
+        const { accountType, owner, actor } = getRestaurantActor(req);
         const authHeader = req.headers.authorization || "";
         const token = authHeader.startsWith("Bearer ")
             ? authHeader.split(" ")[1]
@@ -17,7 +19,7 @@ const ownerLogout = async (req, res) => {
             { jti },
             {
                 jti,
-                ownerId: req.owner._id,
+                ownerId: owner._id,
                 expiresAt: getOwnerTokenExpiryDate(decoded),
             },
             { upsert: true }
@@ -25,11 +27,16 @@ const ownerLogout = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            message: "Owner logged out successfully",
-            email: req.owner.ownerEmail,
+            message:
+                accountType === "staff"
+                    ? "Staff logged out successfully"
+                    : "Owner logged out successfully",
+            accountType,
+            email:
+                accountType === "staff" ? actor.email : owner.ownerEmail,
         });
     } catch (error) {
-        console.error("Owner logout error:", error);
+        console.error("Logout error:", error);
         return res.status(500).json({
             success: false,
             message: error.message || "Failed to logout",

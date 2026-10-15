@@ -26,16 +26,16 @@ const collectKeys = (nodes = [], keys = new Set()) => {
     return keys;
 };
 
-const assertPermissionsWithinOwner = (owner, permissions) => {
+const assertPermissionsWithinActor = (actor, permissions) => {
     const normalized = normalizeRestaurantPermissions(permissions);
-    const ownerSidebar = getRestaurantSidebarForUser(owner);
-    const ownerKeys = collectKeys(ownerSidebar);
+    const actorSidebar = getRestaurantSidebarForUser(actor);
+    const actorKeys = collectKeys(actorSidebar);
     const assignedKeys = collectKeys(normalized);
 
     for (const key of assignedKeys) {
-        if (!ownerKeys.has(key)) {
+        if (!actorKeys.has(key)) {
             throw new Error(
-                `You cannot assign permission "${key}" because it is not in your sidebar`
+                `You cannot assign permission "${key}" because it is not in your access`
             );
         }
     }
@@ -43,4 +43,11 @@ const assertPermissionsWithinOwner = (owner, permissions) => {
     return normalized;
 };
 
-export { assertPermissionsWithinOwner, collectKeys };
+// Backward-compatible alias
+const assertPermissionsWithinOwner = assertPermissionsWithinActor;
+
+export {
+    assertPermissionsWithinOwner,
+    assertPermissionsWithinActor,
+    collectKeys,
+};

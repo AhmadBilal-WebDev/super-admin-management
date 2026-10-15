@@ -3,11 +3,12 @@ import formatBranch from "../../../utils/superadminUtils/formatBranch.js";
 import {
     assertOwnerDomain,
     getFrontendDomainFromRequest,
+    getRestaurantActor,
 } from "../../../utils/restaurantUtils/findManageableStaff.js";
 
 const getOwnerBranches = async (req, res) => {
     try {
-        const owner = req.owner;
+        const { actor, owner, accountType } = getRestaurantActor(req);
 
         const domainCheck = assertOwnerDomain(
             owner,
@@ -34,6 +35,38 @@ const getOwnerBranches = async (req, res) => {
         const filter = {
             merchantId: owner._id,
         };
+
+        // Staff with limited branches → only their assigned branches
+        if (
+            accountType === "staff" &&
+            actor.accessAllBranches !== true
+        ) {
+            const allowedIds = Array.isArray(actor.branchIds)
+                ? actor.branchIds
+                : [];
+
+            if (!allowedIds.length) {
+                return res.status(200).json({
+                    success: true,
+                    message: "Branches fetched successfully",
+                    count: 0,
+                    accountType: "staff",
+                    accessAllBranches: false,
+                    hasMultipleBranches: false,
+                    showAllBranchesButton: {
+                        key: "showAllBranches",
+                        label: "Show All Branches",
+                        show: false,
+                        showAllBranches: false,
+                        query: null,
+                    },
+                    frontendDomainUrl: owner.frontendDomainUrl,
+                    branches: [],
+                });
+            }
+
+            filter._id = { $in: allowedIds };
+        }
 
         if (isActive !== undefined) {
             if (isActive === "true" || isActive === true) {
@@ -74,16 +107,34 @@ const getOwnerBranches = async (req, res) => {
         }
 
         const branches = await Branch.find(filter).sort({ createdAt: -1 });
+        const formattedBranches = branches.map(formatBranch);
+        const hasMultipleBranches = formattedBranches.length >= 2;
+        const canShowAll =
+            accountType === "owner" || actor.accessAllBranches === true;
 
         return res.status(200).json({
             success: true,
             message: "Branches fetched successfully",
-            count: branches.length,
+            count: formattedBranches.length,
+            accountType,
+            accessAllBranches:
+                accountType === "owner" ? true : actor.accessAllBranches === true,
+            hasMultipleBranches,
+            showAllBranchesButton: {
+                key: "showAllBranches",
+                label: "Show All Branches",
+                show: canShowAll && hasMultipleBranches,
+                showAllBranches: canShowAll && hasMultipleBranches,
+                query:
+                    canShowAll && hasMultipleBranches
+                        ? { showAllBranches: true }
+                        : null,
+            },
             frontendDomainUrl: owner.frontendDomainUrl,
-            branches: branches.map(formatBranch),
+            branches: formattedBranches,
         });
     } catch (error) {
-        console.error("Get owner branches error:", error);
+        console.error("Get branches error:", error);
         return res.status(500).json({
             success: false,
             message: error.message || "Failed to fetch branches",

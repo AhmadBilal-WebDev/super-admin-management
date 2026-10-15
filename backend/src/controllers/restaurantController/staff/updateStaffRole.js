@@ -1,15 +1,19 @@
 import Staff from "../../../models/restaurantModels/staff.js";
 import Merchant from "../../../models/superadminModels/bussiness/merchant.js";
 import findManageableStaff from "../../../utils/restaurantUtils/findManageableStaff.js";
-import { assertPermissionsWithinOwner } from "../../../utils/restaurantUtils/assertPermissionsWithinOwner.js";
+import { assertPermissionsWithinActor } from "../../../utils/restaurantUtils/assertPermissionsWithinOwner.js";
 import getPublicStaff from "../../../utils/restaurantUtils/getPublicStaff.js";
+import resolveStaffBranchAccess from "../../../utils/restaurantUtils/resolveStaffBranchAccess.js";
 import { normalizeCnic, isValidCnic } from "../../../utils/superadminUtils/cnic.js";
 
 const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
 const updateStaffRole = async (req, res) => {
     try {
-        const { staff, error } = await findManageableStaff(req, req.params.id);
+        const { staff, owner, actor, error } = await findManageableStaff(
+            req,
+            req.params.id
+        );
 
         if (error) {
             return res.status(error.status).json({
@@ -181,8 +185,8 @@ const updateStaffRole = async (req, res) => {
             }
 
             try {
-                update.allowedSidebar = assertPermissionsWithinOwner(
-                    req.owner,
+                update.allowedSidebar = assertPermissionsWithinActor(
+                    actor,
                     permissions
                 );
                 shouldInvalidateSessions = true;
@@ -192,6 +196,39 @@ const updateStaffRole = async (req, res) => {
                     message: permissionError.message || "Invalid permissions",
                 });
             }
+        }
+
+        const wantsBranchUpdate =
+            req.body.accessAllBranches !== undefined ||
+            req.body.showAllBranches !== undefined ||
+            req.body.branchIds !== undefined ||
+            req.body.branchId !== undefined ||
+            req.body.branchNames !== undefined ||
+            req.body.branchName !== undefined ||
+            req.query?.accessAllBranches !== undefined ||
+            req.query?.showAllBranches !== undefined ||
+            req.query?.branchIds !== undefined ||
+            req.query?.branchId !== undefined;
+
+        if (wantsBranchUpdate) {
+            const branchAccess = await resolveStaffBranchAccess(
+                owner,
+                { ...req.body, ...req.query },
+                { actor }
+            );
+
+            if (branchAccess.error) {
+                return res.status(branchAccess.error.status).json({
+                    success: false,
+                    message: branchAccess.error.message,
+                });
+            }
+
+            update.accessAllBranches = branchAccess.accessAllBranches;
+            update.branchIds = branchAccess.branchIds;
+            update.branchNames = branchAccess.branchNames;
+            update.staffType = branchAccess.staffType;
+            shouldInvalidateSessions = true;
         }
 
         if (Object.keys(update).length === 0) {

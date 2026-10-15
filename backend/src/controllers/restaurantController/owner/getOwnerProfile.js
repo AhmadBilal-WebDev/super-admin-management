@@ -1,48 +1,94 @@
 import findBussiness from "../../../utils/superadminUtils/findBussiness.js";
 import { formatCurrencyFields } from "../../../constants/superadminConstants/currencies.js";
+import getPublicStaff from "../../../utils/restaurantUtils/getPublicStaff.js";
+import { getRestaurantSidebarForUser } from "../../../constants/restaurantConstant/sidebarCatalog.js";
+import {
+    assertOwnerDomain,
+    getFrontendDomainFromRequest,
+    getRestaurantActor,
+} from "../../../utils/restaurantUtils/findManageableStaff.js";
 
 const getOwnerProfile = async (req, res) => {
     try {
-        const merchant = req.owner;
+        const { actor, owner, accountType } = getRestaurantActor(req);
 
-        const parentBussiness = await findBussiness(merchant.bussinessId);
+        const domainCheck = assertOwnerDomain(
+            owner,
+            getFrontendDomainFromRequest(req)
+        );
+
+        if (domainCheck.error) {
+            return res.status(domainCheck.error.status).json({
+                success: false,
+                message: domainCheck.error.message,
+            });
+        }
+
+        const parentBussiness = await findBussiness(owner.bussinessId);
+
+        if (accountType === "staff") {
+            return res.status(200).json({
+                success: true,
+                message: "Staff profile fetched successfully",
+                accountType: "staff",
+                profile: getPublicStaff(actor),
+                sidebar: getRestaurantSidebarForUser(actor),
+                merchant: {
+                    id: owner._id,
+                    name: owner.name,
+                    slug: owner.slug || "",
+                    frontendDomainUrl: owner.frontendDomainUrl,
+                    ...formatCurrencyFields(owner.currency),
+                },
+                bussiness: parentBussiness
+                    ? {
+                          id: parentBussiness._id,
+                          name: parentBussiness.name,
+                          slug: parentBussiness.slug || "",
+                          description: parentBussiness.description || "",
+                      }
+                    : null,
+            });
+        }
 
         return res.status(200).json({
             success: true,
             message: "Owner profile fetched successfully",
+            accountType: "owner",
             profile: {
-                id: merchant._id,
-                bussinessId: merchant.bussinessId,
-                name: merchant.name,
-                slug: merchant.slug || "",
-                description: merchant.description || "",
-                ownerFirstName: merchant.ownerFirstName || "",
-                ownerLastName: merchant.ownerLastName || "",
-                ownerEmail: merchant.ownerEmail,
-                ownerCnic: merchant.ownerCnic || "",
-                profilePitcher: merchant.profilePitcher || "",
-                frontendDomainUrl: merchant.frontendDomainUrl,
-                gender: merchant.gender || "",
-                dateOfBirth: merchant.dateOfBirth || null,
-                countryCode: merchant.countryCode || "",
-                contactNumber: merchant.contactNumber || "",
-                secondaryContactNumber: merchant.secondaryContactNumber || "",
-                headAddress: merchant.headAddress || "",
-                country: merchant.country || "",
-                province: merchant.province || "",
-                city: merchant.city || "",
-                district: merchant.district || "",
-                postalCode: merchant.postalCode || "",
-                businessType: merchant.businessType || "",
-                ...formatCurrencyFields(merchant.currency),
-                isActive: merchant.isActive !== false,
-                isOwnerEmailVerified: merchant.isOwnerEmailVerified === true,
-                isPasswordSet: merchant.isPasswordSet === true,
-                allowedSidebar: merchant.allowedSidebar || [],
-                createdBy: merchant.createdBy || null,
-                createdAt: merchant.createdAt,
-                updatedAt: merchant.updatedAt,
+                id: owner._id,
+                bussinessId: owner.bussinessId,
+                name: owner.name,
+                slug: owner.slug || "",
+                description: owner.description || "",
+                ownerFirstName: owner.ownerFirstName || "",
+                ownerLastName: owner.ownerLastName || "",
+                ownerEmail: owner.ownerEmail,
+                ownerCnic: owner.ownerCnic || "",
+                profilePitcher: owner.profilePitcher || "",
+                frontendDomainUrl: owner.frontendDomainUrl,
+                gender: owner.gender || "",
+                dateOfBirth: owner.dateOfBirth || null,
+                countryCode: owner.countryCode || "",
+                contactNumber: owner.contactNumber || "",
+                secondaryContactNumber: owner.secondaryContactNumber || "",
+                headAddress: owner.headAddress || "",
+                country: owner.country || "",
+                province: owner.province || "",
+                city: owner.city || "",
+                district: owner.district || "",
+                postalCode: owner.postalCode || "",
+                businessType: owner.businessType || "",
+                ...formatCurrencyFields(owner.currency),
+                isActive: owner.isActive !== false,
+                isOwnerEmailVerified: owner.isOwnerEmailVerified === true,
+                isPasswordSet: owner.isPasswordSet === true,
+                allowedSidebar: owner.allowedSidebar || [],
+                createdBy: owner.createdBy || null,
+                createdAt: owner.createdAt,
+                updatedAt: owner.updatedAt,
             },
+            sidebar: getRestaurantSidebarForUser(owner),
             bussiness: parentBussiness
                 ? {
                       id: parentBussiness._id,
@@ -53,10 +99,10 @@ const getOwnerProfile = async (req, res) => {
                 : null,
         });
     } catch (error) {
-        console.error("Get owner profile error:", error);
+        console.error("Get profile error:", error);
         return res.status(500).json({
             success: false,
-            message: error.message || "Failed to fetch owner profile",
+            message: error.message || "Failed to fetch profile",
         });
     }
 };
