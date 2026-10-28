@@ -11,6 +11,7 @@ import {
     getMerchantBranchNames,
     normalizeBranchNameList,
 } from "../../../utils/restaurantUtils/catalogScope.js";
+import { buildCatalogCreatorMeta } from "../../../utils/restaurantUtils/catalogCreatorMeta.js";
 import {
     normalizeCatalogTags,
     mergeTagsWithFlags,
@@ -445,8 +446,7 @@ const createProduct = async (req, res) => {
             isRecommended: synced.isRecommended,
             isActive: parseBoolean(req.body.isActive, true),
             displayOrder: Number.isNaN(sortValue) ? 0 : sortValue,
-            createdBy: scope.actorId,
-            createdByType: scope.accountType,
+            ...buildCatalogCreatorMeta(scope),
         });
 
         await pushProductToCategory(category._id, product);

@@ -22,6 +22,7 @@ const getPublicStaff = (staff) => ({
     gender: staff.gender || "",
     dateOfBirth: staff.dateOfBirth || null,
     profilePitcher: staff.profilePitcher || "",
+    theme: staff.theme === "dark" ? "dark" : "light",
     isActive: staff.isActive !== false,
     isEmailVerified: staff.isEmailVerified === true,
     isPasswordSet: staff.isPasswordSet === true,

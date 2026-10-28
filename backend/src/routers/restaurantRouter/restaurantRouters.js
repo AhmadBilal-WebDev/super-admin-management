@@ -10,6 +10,10 @@ import uploadOwnerProfilePitcher from "../../controllers/restaurantController/ow
 import removeOwnerProfilePitcher from "../../controllers/restaurantController/owner/removeOwnerProfilePitcher.js";
 import ownerLogout from "../../controllers/restaurantController/owner/ownerLogout.js";
 import getOwnerBranches from "../../controllers/restaurantController/owner/getOwnerBranches.js";
+import {
+    getTheme,
+    updateTheme,
+} from "../../controllers/restaurantController/owner/themeController.js";
 import createStaffRole from "../../controllers/restaurantController/staff/createStaffRole.js";
 import getStaffRoles from "../../controllers/restaurantController/staff/getStaffRoles.js";
 import updateStaffRole from "../../controllers/restaurantController/staff/updateStaffRole.js";
@@ -51,19 +55,23 @@ router.post("/logout", restaurantAuthMiddleware, ownerLogout);
 router.get("/owner/branches", restaurantAuthMiddleware, getOwnerBranches);
 router.get("/branches", restaurantAuthMiddleware, getOwnerBranches);
 
+// Theme — per account (owner/staff), default light
+router.get("/theme", restaurantAuthMiddleware, getTheme);
+router.put("/theme", restaurantAuthMiddleware, updateTheme);
+
 // Public branches — user site (no auth), filter by frontend domain
 router.get("/branches/public", getPublicBranches);
 
 router.post(
     "/owner/upload-profilepitcher",
-    ownerAuthMiddleware,
+    restaurantAuthMiddleware,
     upload.single("profilePitcher"),
     uploadOwnerProfilePitcher
 );
 
 router.delete(
     "/owner/remove-profilepitcher",
-    ownerAuthMiddleware,
+    restaurantAuthMiddleware,
     removeOwnerProfilePitcher
 );
 

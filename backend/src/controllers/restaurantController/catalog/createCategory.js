@@ -6,6 +6,7 @@ import {
     parseBoolean,
     resolveCatalogWriteScope,
 } from "../../../utils/restaurantUtils/catalogScope.js";
+import { buildCatalogCreatorMeta } from "../../../utils/restaurantUtils/catalogCreatorMeta.js";
 import {
     normalizeCatalogTags,
     mergeTagsWithFlags,
@@ -122,8 +123,7 @@ const createCategory = async (req, res) => {
             isActive: parseBoolean(isActive, true),
             isFeatured: synced.isFeatured,
             tags: normalizedTags,
-            createdBy: scope.actorId,
-            createdByType: scope.accountType,
+            ...buildCatalogCreatorMeta(scope),
         });
 
         return res.status(201).json({

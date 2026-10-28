@@ -97,6 +97,11 @@ const staffSchema = new mongoose.Schema(
             type: String,
             default: "",
         },
+        theme: {
+            type: String,
+            enum: ["light", "dark"],
+            default: "light",
+        },
         password: {
             type: String,
             default: "",

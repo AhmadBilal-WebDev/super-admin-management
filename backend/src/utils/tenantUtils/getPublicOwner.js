@@ -22,6 +22,7 @@ const getPublicOwner = (merchant) => ({
     isPasswordSet: merchant.isPasswordSet === true,
     tokenVersion: merchant.tokenVersion || 0,
     allowedSidebar: merchant.allowedSidebar || [],
+    theme: merchant.theme === "dark" ? "dark" : "light",
     createdAt: merchant.createdAt,
     updatedAt: merchant.updatedAt,
 });

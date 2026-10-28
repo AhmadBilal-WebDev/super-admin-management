@@ -1,4 +1,5 @@
 import { formatCatalogTags } from "../../constants/restaurantConstant/catalogTags.js";
+import { formatCreatedByDetails } from "./catalogCreatorMeta.js";
 
 const formatCategoryProductNames = (products = []) =>
     (Array.isArray(products) ? products : []).map((item) => ({
@@ -35,8 +36,7 @@ const formatCategory = (category, fullProducts = null) => {
         tags,
         products: productNames,
         productsCount: productNames.length,
-        createdBy: category.createdBy || null,
-        createdByType: category.createdByType || "owner",
+        ...formatCreatedByDetails(category),
         createdAt: category.createdAt,
         updatedAt: category.updatedAt,
     };

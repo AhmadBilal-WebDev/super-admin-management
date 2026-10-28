@@ -84,6 +84,7 @@ const getOwnerProfile = async (req, res) => {
                 isOwnerEmailVerified: owner.isOwnerEmailVerified === true,
                 isPasswordSet: owner.isPasswordSet === true,
                 allowedSidebar: owner.allowedSidebar || [],
+                theme: owner.theme === "dark" ? "dark" : "light",
                 createdBy: owner.createdBy || null,
                 createdAt: owner.createdAt,
                 updatedAt: owner.updatedAt,

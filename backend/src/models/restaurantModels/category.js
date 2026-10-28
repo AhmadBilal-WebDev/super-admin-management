@@ -92,11 +92,27 @@ const categorySchema = new mongoose.Schema(
         createdBy: {
             type: mongoose.Schema.Types.ObjectId,
             default: null,
+            index: true,
         },
         createdByType: {
             type: String,
             enum: ["owner", "staff"],
             default: "owner",
+        },
+        createdByName: {
+            type: String,
+            default: "",
+            trim: true,
+        },
+        createdByRole: {
+            type: String,
+            default: "",
+            trim: true,
+        },
+        createdByStaffType: {
+            type: String,
+            default: "",
+            trim: true,
         },
     },
     { timestamps: true }

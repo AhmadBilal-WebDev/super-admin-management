@@ -1,4 +1,5 @@
 import { formatCatalogTags } from "../../constants/restaurantConstant/catalogTags.js";
+import { formatCreatedByDetails } from "./catalogCreatorMeta.js";
 
 const formatProduct = (product, category = null) => {
     const tags = formatCatalogTags(product.tags || []);
@@ -86,8 +87,7 @@ const formatProduct = (product, category = null) => {
         isActive: product.isActive !== false,
         displayOrder: product.displayOrder ?? 0,
         sort: product.displayOrder ?? 0,
-        createdBy: product.createdBy || null,
-        createdByType: product.createdByType || "owner",
+        ...formatCreatedByDetails(product),
         createdAt: product.createdAt,
         updatedAt: product.updatedAt,
     };

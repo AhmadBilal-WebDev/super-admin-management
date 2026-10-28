@@ -101,6 +101,18 @@ const assertOwnerDomain = (owner, frontendDomainUrl) => {
     return {};
 };
 
+/** Owner can manage every role. Staff can manage only roles they created. */
+const canManageCreatedStaffRole = (accountType, actorId, staff) => {
+    if (accountType === "owner") {
+        return true;
+    }
+
+    return (
+        String(staff.createdBy || "") === String(actorId) &&
+        (staff.createdByType === "staff" || !staff.createdByType)
+    );
+};
+
 const findManageableStaff = async (req, staffId) => {
     const { actor, owner, accountType, actorId } = getRestaurantActor(req);
 
@@ -155,6 +167,17 @@ const findManageableStaff = async (req, staffId) => {
         };
     }
 
+    // Only creator staff (or owner) can edit / block / delete
+    if (!canManageCreatedStaffRole(accountType, actorId, staff)) {
+        return {
+            error: {
+                status: 403,
+                message:
+                    "You can only edit, block or delete roles that you created",
+            },
+        };
+    }
+
     return { staff, owner, actor, accountType, actorId };
 };
 
@@ -162,6 +185,7 @@ export {
     canViewAllStaff,
     canCreateStaff,
     canAccessStaffRoles,
+    canManageCreatedStaffRole,
     assertOwnerDomain,
     getFrontendDomainFromRequest,
     getRestaurantActor,

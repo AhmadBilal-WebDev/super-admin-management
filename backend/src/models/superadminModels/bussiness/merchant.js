@@ -166,6 +166,11 @@ const merchantSchema = new mongoose.Schema(
             type: [mongoose.Schema.Types.Mixed],
             default: [],
         },
+        theme: {
+            type: String,
+            enum: ["light", "dark"],
+            default: "light",
+        },
         createdBy: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "superadmin",

@@ -57,17 +57,11 @@ const restaurantSidebarCatalog = [
         label: "Catalog",
 
         buttons: [
-
-            { key: "products", label: "Products" },
-
             { key: "categories", label: "Categories" },
-
+            { key: "products", label: "Products" },
             { key: "variantsaddons", label: "Variants & Add-ons" },
-
             { key: "dealscombos", label: "Deals & Combos" },
-
             { key: "availability", label: "Availability" },
-
             { key: "inventory", label: "Inventory" },
 
         ],

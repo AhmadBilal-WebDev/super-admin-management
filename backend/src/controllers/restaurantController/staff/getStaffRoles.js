@@ -1,6 +1,7 @@
 import Staff from "../../../models/restaurantModels/staff.js";
 import {
     canViewAllStaff,
+    canManageCreatedStaffRole,
     assertOwnerDomain,
     getFrontendDomainFromRequest,
     getRestaurantActor,
@@ -9,7 +10,7 @@ import getPublicStaff from "../../../utils/restaurantUtils/getPublicStaff.js";
 
 const getStaffRoles = async (req, res) => {
     try {
-        const { actor, owner } = getRestaurantActor(req);
+        const { actor, owner, accountType, actorId } = getRestaurantActor(req);
 
         if (!canViewAllStaff(actor)) {
             return res.status(403).json({
@@ -30,7 +31,15 @@ const getStaffRoles = async (req, res) => {
             });
         }
 
-        const staffList = await Staff.find({ merchantId: owner._id })
+        // Owner → all roles. Staff → only roles they created.
+        const filter = { merchantId: owner._id };
+
+        if (accountType === "staff") {
+            filter.createdBy = actorId;
+            filter.createdByType = "staff";
+        }
+
+        const staffList = await Staff.find(filter)
             .select("-password -otp")
             .sort({ createdAt: -1 });
 
@@ -38,7 +47,15 @@ const getStaffRoles = async (req, res) => {
             success: true,
             message: "Staff roles fetched successfully",
             count: staffList.length,
-            staff: staffList.map(getPublicStaff),
+            accountType,
+            staff: staffList.map((item) => ({
+                ...getPublicStaff(item),
+                canManage: canManageCreatedStaffRole(
+                    accountType,
+                    actorId,
+                    item
+                ),
+            })),
         });
     } catch (error) {
         console.error("Get staff roles error:", error);
