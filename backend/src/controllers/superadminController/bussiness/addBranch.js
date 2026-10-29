@@ -4,6 +4,7 @@ import findBussiness from "../../../utils/superadminUtils/findBussiness.js";
 import findMerchant from "../../../utils/superadminUtils/findMerchant.js";
 import hasSidebarButton from "../../../utils/superadminUtils/hasSidebarButton.js";
 import toBussinessSlug from "../../../utils/superadminUtils/toBussinessSlug.js";
+import normalizeBranchCoordinates from "../../../utils/superadminUtils/normalizeBranchCoordinates.js";
 import { getSidebarForUser } from "../../../constants/superadminConstants/sidebarCatalog.js";
 import { grantSidebarPath } from "../../../utils/superadminUtils/grantSidebarPath.js";
 
@@ -97,6 +98,18 @@ const addBranch = async (req, res) => {
             });
         }
 
+        const coords = normalizeBranchCoordinates(
+            { latitude, longitude },
+            { required: true }
+        );
+
+        if (coords.error) {
+            return res.status(400).json({
+                success: false,
+                message: coords.error,
+            });
+        }
+
         const trimmedName = String(name).trim();
         const normalizedBranchCode = String(branchCode).trim().toUpperCase();
         const nameKey = trimmedName.toLowerCase();
@@ -155,8 +168,8 @@ const addBranch = async (req, res) => {
             managerContact: managerContact ? String(managerContact).trim() : "",
             openingTime: openingTime ? String(openingTime).trim() : "",
             closingTime: closingTime ? String(closingTime).trim() : "",
-            latitude: latitude ? String(latitude).trim() : "",
-            longitude: longitude ? String(longitude).trim() : "",
+            latitude: coords.latitude,
+            longitude: coords.longitude,
             isActive:
                 isActive === undefined
                     ? true

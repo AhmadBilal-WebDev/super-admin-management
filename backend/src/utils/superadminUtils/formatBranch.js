@@ -1,3 +1,5 @@
+import { formatServicePolygon } from "../restaurantUtils/serviceAreaGeo.js";
+
 const formatBranch = (branch) => ({
     id: branch._id,
     bussinessId: branch.bussinessId,
@@ -5,25 +7,22 @@ const formatBranch = (branch) => ({
     name: branch.name,
     slug: branch.slug || "",
     branchCode: branch.branchCode,
-    // address: branch.address,
-    // country: branch.country,
-    // province: branch.province,
-    // city: branch.city,
-    // district: branch.district,
-    // postalCode: branch.postalCode || "",
-    // countryCode: branch.countryCode,
-    // contactNumber: branch.contactNumber,
-    // email: branch.email || "",
-    // managerName: branch.managerName || "",
-    // managerContact: branch.managerContact || "",
-    // openingTime: branch.openingTime || "",
-    // closingTime: branch.closingTime || "",
-    // latitude: branch.latitude || "",
-    // longitude: branch.longitude || "",
-    // isActive: branch.isActive !== false,
-    // createdBy: branch.createdBy || null,
-    // createdAt: branch.createdAt,
-    // updatedAt: branch.updatedAt,
+    address: branch.address || "",
+    city: branch.city || "",
+    province: branch.province || "",
+    country: branch.country || "",
+    district: branch.district || "",
+    // Restaurant pin (superadmin) — map center
+    latitude: branch.latitude || "",
+    longitude: branch.longitude || "",
+    // Optional map helper radius
+    serviceRadiusKm:
+        branch.serviceRadiusKm === undefined || branch.serviceRadiusKm === null
+            ? null
+            : Number(branch.serviceRadiusKm),
+    // Delivery boundary — orders only inside these points
+    servicePolygon: formatServicePolygon(branch.servicePolygon),
+    isActive: branch.isActive !== false,
 });
 
 export default formatBranch;

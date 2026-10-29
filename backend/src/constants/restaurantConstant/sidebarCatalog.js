@@ -75,13 +75,9 @@ const restaurantSidebarCatalog = [
         label: "Delivery",
 
         buttons: [
-
             { key: "deliveryriders", label: "Delivery Riders" },
-
             { key: "deliveryzones", label: "Delivery Zones" },
-
             { key: "branchhours", label: "Branch Hours" },
-
         ],
 
     },
@@ -107,6 +103,7 @@ const restaurantSidebarCatalog = [
         label: "Branch Management",
         buttons: [
             { key: "branches", label: "Branches" },
+            { key: "areas", label: "Areas & Towns" },
             {
                 key: "staffroles",
                 label: "Staff & Roles",

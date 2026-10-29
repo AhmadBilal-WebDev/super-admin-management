@@ -11,6 +11,10 @@ import removeOwnerProfilePitcher from "../../controllers/restaurantController/ow
 import ownerLogout from "../../controllers/restaurantController/owner/ownerLogout.js";
 import getOwnerBranches from "../../controllers/restaurantController/owner/getOwnerBranches.js";
 import {
+    setBranchServiceArea,
+    clearBranchServiceArea,
+} from "../../controllers/restaurantController/owner/manageBranchAreas.js";
+import {
     getTheme,
     updateTheme,
 } from "../../controllers/restaurantController/owner/themeController.js";
@@ -35,6 +39,7 @@ import getPublicBanners from "../../controllers/restaurantController/banner/getP
 import updateBanner from "../../controllers/restaurantController/banner/updateBanner.js";
 import deleteBanner from "../../controllers/restaurantController/banner/deleteBanner.js";
 import getPublicBranches from "../../controllers/restaurantController/user/getBranches/getPublicBranches.js";
+import checkBranchServiceArea from "../../controllers/restaurantController/user/getBranches/checkBranchServiceArea.js";
 import addNewDeals from "../../controllers/restaurantController/deals/addNewDeals.js";
 import getDeals from "../../controllers/restaurantController/deals/getDeals.js";
 import getPublicDeals from "../../controllers/restaurantController/deals/getPublicDeals.js";
@@ -55,12 +60,43 @@ router.post("/logout", restaurantAuthMiddleware, ownerLogout);
 router.get("/owner/branches", restaurantAuthMiddleware, getOwnerBranches);
 router.get("/branches", restaurantAuthMiddleware, getOwnerBranches);
 
+// Branch service radius — owner marks km around restaurant pin (no lat/lng in body)
+router.put(
+    "/owner/branches/:branchId/areas",
+    ownerAuthMiddleware,
+    setBranchServiceArea
+);
+router.put(
+    "/branches/:branchId/areas",
+    ownerAuthMiddleware,
+    setBranchServiceArea
+);
+router.delete(
+    "/owner/branches/:branchId/areas",
+    ownerAuthMiddleware,
+    clearBranchServiceArea
+);
+router.delete(
+    "/branches/:branchId/areas",
+    ownerAuthMiddleware,
+    clearBranchServiceArea
+);
+
 // Theme — per account (owner/staff), default light
 router.get("/theme", restaurantAuthMiddleware, getTheme);
 router.put("/theme", restaurantAuthMiddleware, updateTheme);
 
 // Public branches — user site (no auth), filter by frontend domain
 router.get("/branches/public", getPublicBranches);
+// Check if customer lat/lng is inside branch polygon (outside = no order)
+router.post(
+    "/branches/:branchId/check-service-area",
+    checkBranchServiceArea
+);
+router.get(
+    "/branches/:branchId/check-service-area",
+    checkBranchServiceArea
+);
 
 router.post(
     "/owner/upload-profilepitcher",

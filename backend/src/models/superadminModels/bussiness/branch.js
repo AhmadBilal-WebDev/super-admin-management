@@ -104,6 +104,7 @@ const branchSchema = new mongoose.Schema(
             default: "",
             trim: true,
         },
+        // Exact restaurant pin — set by superadmin
         latitude: {
             type: String,
             default: "",
@@ -114,6 +115,28 @@ const branchSchema = new mongoose.Schema(
             default: "",
             trim: true,
         },
+        // Optional map helper radius (km) around restaurant pin
+        serviceRadiusKm: {
+            type: Number,
+            default: null,
+            min: 0.1,
+            max: 200,
+        },
+        // Owner-drawn coverage polygon (min 4 points). Orders only inside this.
+        servicePolygon: [
+            {
+                latitude: {
+                    type: String,
+                    required: true,
+                    trim: true,
+                },
+                longitude: {
+                    type: String,
+                    required: true,
+                    trim: true,
+                },
+            },
+        ],
         isActive: {
             type: Boolean,
             default: true,

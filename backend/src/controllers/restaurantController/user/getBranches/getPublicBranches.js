@@ -1,9 +1,12 @@
 import Branch from "../../../../models/superadminModels/bussiness/branch.js";
 import findMerchantByDomain from "../../../../utils/restaurantUtils/findMerchantByDomain.js";
-import formatBranch from "../../../../utils/superadminUtils/formatBranch.js";
+import { formatServicePolygon } from "../../../../utils/restaurantUtils/serviceAreaGeo.js";
 
 const formatPublicBranch = (branch) => ({
-    // ...formatBranch(branch),
+    id: branch._id,
+    name: branch.name || "",
+    slug: branch.slug || "",
+    branchCode: branch.branchCode || "",
     address: branch.address || "",
     city: branch.city || "",
     province: branch.province || "",
@@ -15,6 +18,11 @@ const formatPublicBranch = (branch) => ({
     closingTime: branch.closingTime || "",
     latitude: branch.latitude || "",
     longitude: branch.longitude || "",
+    serviceRadiusKm:
+        branch.serviceRadiusKm === undefined || branch.serviceRadiusKm === null
+            ? null
+            : Number(branch.serviceRadiusKm),
+    servicePolygon: formatServicePolygon(branch.servicePolygon),
     isActive: branch.isActive !== false,
 });
 

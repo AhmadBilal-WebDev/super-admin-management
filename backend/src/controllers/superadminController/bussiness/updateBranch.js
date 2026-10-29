@@ -5,6 +5,7 @@ import findMerchant from "../../../utils/superadminUtils/findMerchant.js";
 import findBranch from "../../../utils/superadminUtils/findBranch.js";
 import hasSidebarButton from "../../../utils/superadminUtils/hasSidebarButton.js";
 import toBussinessSlug from "../../../utils/superadminUtils/toBussinessSlug.js";
+import normalizeBranchCoordinates from "../../../utils/superadminUtils/normalizeBranchCoordinates.js";
 import { getSidebarForUser } from "../../../constants/superadminConstants/sidebarCatalog.js";
 
 const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -249,12 +250,26 @@ const updateBranch = async (req, res) => {
             update.closingTime = String(closingTime).trim();
         }
 
-        if (latitude !== undefined) {
-            update.latitude = String(latitude).trim();
-        }
+        if (latitude !== undefined || longitude !== undefined) {
+            const coords = normalizeBranchCoordinates(
+                {
+                    latitude:
+                        latitude !== undefined ? latitude : branch.latitude,
+                    longitude:
+                        longitude !== undefined ? longitude : branch.longitude,
+                },
+                { required: true }
+            );
 
-        if (longitude !== undefined) {
-            update.longitude = String(longitude).trim();
+            if (coords.error) {
+                return res.status(400).json({
+                    success: false,
+                    message: coords.error,
+                });
+            }
+
+            update.latitude = coords.latitude;
+            update.longitude = coords.longitude;
         }
 
         if (isActive !== undefined) {
