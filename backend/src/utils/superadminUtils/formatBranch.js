@@ -12,6 +12,9 @@ const formatBranch = (branch) => ({
     province: branch.province || "",
     country: branch.country || "",
     district: branch.district || "",
+    email: branch.email || "",
+    // Noreply email used to send customer OTPs (sharable across branches)
+    otpEmail: branch.otpEmail || "",
     // Restaurant pin (superadmin) — map center
     latitude: branch.latitude || "",
     longitude: branch.longitude || "",

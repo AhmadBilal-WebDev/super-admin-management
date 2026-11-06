@@ -65,6 +65,7 @@ const updateBranch = async (req, res) => {
             countryCode,
             contactNumber,
             email,
+            otpEmail,
             managerName,
             managerContact,
             openingTime,
@@ -232,6 +233,21 @@ const updateBranch = async (req, res) => {
             }
 
             update.email = normalizedEmail;
+        }
+
+        if (otpEmail !== undefined) {
+            const normalizedOtpEmail = String(otpEmail || "")
+                .toLowerCase()
+                .trim();
+
+            if (!normalizedOtpEmail || !isValidEmail(normalizedOtpEmail)) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Valid OTP email (noreply) is required",
+                });
+            }
+
+            update.otpEmail = normalizedOtpEmail;
         }
 
         if (managerName !== undefined) {

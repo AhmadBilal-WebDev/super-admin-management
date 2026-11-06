@@ -84,6 +84,13 @@ const branchSchema = new mongoose.Schema(
             lowercase: true,
             trim: true,
         },
+        // Noreply / OTP sender email — can be shared across same restaurant branches
+        otpEmail: {
+            type: String,
+            default: "",
+            lowercase: true,
+            trim: true,
+        },
         managerName: {
             type: String,
             default: "",

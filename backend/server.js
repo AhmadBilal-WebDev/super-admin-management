@@ -6,6 +6,7 @@ import authRouter from "./src/routers/superadminRouter/authRouter.js";
 import bussinessRoute from "./src/routers/superadminRouter/bussinessRoute.js";
 import ownerRouter from "./src/routers/tenantRouter/ownerLogin.js";
 import restaurantRoute from "./src/routers/restaurantRouter/restaurantRouters.js";
+import userRoute from "./src/routers/restaurantRouter/userRouters.js";
 import errorHandler from "./src/middlewares/superAdminMiddleware/errorHandler.js";
 import cors from "cors";
 
@@ -30,6 +31,7 @@ app.use("/api/auth", authRouter);
 app.use("/api/auth", bussinessRoute);
 app.use("/api/tenant", ownerRouter);
 app.use("/api/restaurant", restaurantRoute);
+app.use("/api/restaurant/user", userRoute);
 
 app.use(errorHandler);
 

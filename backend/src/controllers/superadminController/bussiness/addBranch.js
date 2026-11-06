@@ -66,6 +66,7 @@ const addBranch = async (req, res) => {
             countryCode,
             contactNumber,
             email,
+            otpEmail,
             managerName,
             managerContact,
             openingTime,
@@ -85,6 +86,7 @@ const addBranch = async (req, res) => {
             district,
             countryCode,
             contactNumber,
+            otpEmail,
         };
 
         const missingField = Object.entries(requiredFields).find(
@@ -123,11 +125,21 @@ const addBranch = async (req, res) => {
         }
 
         const normalizedEmail = email ? String(email).toLowerCase().trim() : "";
+        const normalizedOtpEmail = String(otpEmail || "")
+            .toLowerCase()
+            .trim();
 
         if (normalizedEmail && !isValidEmail(normalizedEmail)) {
             return res.status(400).json({
                 success: false,
                 message: "Invalid branch email",
+            });
+        }
+
+        if (!normalizedOtpEmail || !isValidEmail(normalizedOtpEmail)) {
+            return res.status(400).json({
+                success: false,
+                message: "Valid OTP email (noreply) is required",
             });
         }
 
@@ -164,6 +176,7 @@ const addBranch = async (req, res) => {
             countryCode: String(countryCode).trim(),
             contactNumber: String(contactNumber).trim(),
             email: normalizedEmail,
+            otpEmail: normalizedOtpEmail,
             managerName: managerName ? String(managerName).trim() : "",
             managerContact: managerContact ? String(managerContact).trim() : "",
             openingTime: openingTime ? String(openingTime).trim() : "",
