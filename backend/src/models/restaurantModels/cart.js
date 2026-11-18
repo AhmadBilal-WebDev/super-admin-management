@@ -121,6 +121,29 @@ const cartSchema = new mongoose.Schema(
             uppercase: true,
             trim: true,
         },
+        // Saved at checkout step (before placing order)
+        checkout: {
+            isReady: { type: Boolean, default: false },
+            orderMode: {
+                type: String,
+                enum: ["delivery", "pickup", "dine_in", ""],
+                default: "",
+            },
+            paymentMethod: {
+                type: String,
+                enum: ["cod", "card", "wallet", "other", ""],
+                default: "",
+            },
+            selectedArea: { type: String, default: "", trim: true },
+            latitude: { type: String, default: "", trim: true },
+            longitude: { type: String, default: "", trim: true },
+            deliveryAddress: { type: String, default: "", trim: true },
+            deliveryFee: { type: Number, default: 0, min: 0 },
+            discountTotal: { type: Number, default: 0, min: 0 },
+            checkoutGrandTotal: { type: Number, default: 0, min: 0 },
+            notes: { type: String, default: "", trim: true },
+            preparedAt: { type: Date, default: null },
+        },
     },
     { timestamps: true }
 );

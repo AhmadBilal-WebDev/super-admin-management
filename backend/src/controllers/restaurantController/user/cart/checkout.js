@@ -1,5 +1,7 @@
 import Cart from "../../../../models/restaurantModels/cart.js";
-import formatCart from "../../../../utils/restaurantUtils/formatCart.js";
+import formatCart, {
+    formatCartItem,
+} from "../../../../utils/restaurantUtils/formatCart.js";
 import {
     assertOwnerDomain,
     getFrontendDomainFromRequest,
@@ -12,23 +14,44 @@ import {
 import { isDeliveryInsideBranchServiceArea } from "../../../../utils/restaurantUtils/serviceAreaGeo.js";
 
 const ORDER_MODES = ["delivery", "pickup", "dine_in"];
+const PAYMENT_METHODS = ["cod", "card", "wallet", "other"];
+
+const formatBranchForCheckout = (branch) => ({
+    id: branch._id,
+    name: branch.name || "",
+    branchCode: branch.branchCode || "",
+    address: branch.address || "",
+    city: branch.city || "",
+    district: branch.district || "",
+    province: branch.province || "",
+    country: branch.country || "",
+    postalCode: branch.postalCode || "",
+    contactNumber: branch.contactNumber || "",
+    email: branch.email || "",
+    openingTime: branch.openingTime || "",
+    closingTime: branch.closingTime || "",
+    // Restaurant / branch map pin
+    latitude: branch.latitude || "",
+    longitude: branch.longitude || "",
+    serviceRadiusKm: branch.serviceRadiusKm ?? null,
+    hasServicePolygon: Array.isArray(branch.servicePolygon)
+        ? branch.servicePolygon.length >= 4
+        : false,
+    isActive: branch.isActive !== false,
+});
 
 /**
- * Checkout preview BEFORE placing order.
- * - Requires login
- * - Uses server cart (after sync) OR optional body.items from localStorage
- * - Validates products + delivery area
- * - Returns ready payload for POST /orders
+ * Checkout = save full cart + delivery/pickup/COD + location details.
+ * Next step: POST /orders with useCheckout: true
  */
 const checkout = async (req, res) => {
     try {
         const merchant = req.merchant;
         const customer = req.customer;
+        const frontendDomainUrl =
+            getFrontendDomainFromRequest(req) || merchant.frontendDomainUrl;
 
-        const domainCheck = assertOwnerDomain(
-            merchant,
-            getFrontendDomainFromRequest(req)
-        );
+        const domainCheck = assertOwnerDomain(merchant, frontendDomainUrl);
 
         if (domainCheck.error) {
             return res.status(domainCheck.error.status).json({
@@ -48,8 +71,22 @@ const checkout = async (req, res) => {
             notes,
             paymentMethod,
             deliveryFee,
-            items: bodyItems,
+            customerName,
+            customerContact,
         } = req.body || {};
+
+        const cart = await Cart.findOne({
+            merchantId: merchant._id,
+            customerId: customer._id,
+        });
+
+        if (!cart || !Array.isArray(cart.items) || !cart.items.length) {
+            return res.status(400).json({
+                success: false,
+                message:
+                    "Cart is empty. Add items to cart first, then checkout",
+            });
+        }
 
         if (!latitude || !longitude) {
             return res.status(400).json({
@@ -69,6 +106,17 @@ const checkout = async (req, res) => {
             });
         }
 
+        const normalizedPayment = String(paymentMethod || "cod")
+            .trim()
+            .toLowerCase();
+
+        if (!PAYMENT_METHODS.includes(normalizedPayment)) {
+            return res.status(400).json({
+                success: false,
+                message: "paymentMethod must be cod, card, wallet, or other",
+            });
+        }
+
         const area = String(selectedArea || "").trim();
         if (normalizedMode === "delivery" && !area) {
             return res.status(400).json({
@@ -77,34 +125,28 @@ const checkout = async (req, res) => {
             });
         }
 
-        let cart = await Cart.findOne({
-            merchantId: merchant._id,
-            customerId: customer._id,
-        });
-
-        const sourceItems =
-            Array.isArray(bodyItems) && bodyItems.length
-                ? bodyItems
-                : (cart?.items || []).map((item) => ({
-                      productId: item.productId,
-                      quantity: item.quantity,
-                      variantId: item.variantId || item.variant?.variantId,
-                      addons: item.addons,
-                      notes: item.notes,
-                  }));
-
-        if (!sourceItems.length) {
+        if (
+            normalizedMode === "delivery" &&
+            !String(deliveryAddress || "").trim()
+        ) {
             return res.status(400).json({
                 success: false,
-                message:
-                    "Cart is empty. Add items first (localStorage or server cart)",
+                message: "deliveryAddress is required for delivery checkout",
             });
         }
 
+        const sourceItems = cart.items.map((item) => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            variantId: item.variantId || item.variant?.variantId,
+            addons: item.addons,
+            notes: item.notes,
+        }));
+
         const validated = await buildValidatedCartItems({
             merchant,
-            branchId: branchId || cart?.branchId,
-            branchName: branchName || cart?.branchName,
+            branchId: branchId || cart.branchId,
+            branchName: branchName || cart.branchName,
             items: sourceItems,
         });
 
@@ -116,9 +158,10 @@ const checkout = async (req, res) => {
         }
 
         const branch = validated.branch;
+        let coverage = { ok: true, reason: "Not required for this order mode" };
 
         if (normalizedMode === "delivery") {
-            const coverage = isDeliveryInsideBranchServiceArea(
+            coverage = isDeliveryInsideBranchServiceArea(
                 branch,
                 latitude,
                 longitude
@@ -129,96 +172,157 @@ const checkout = async (req, res) => {
                     success: false,
                     message: coverage.reason,
                     checkoutAllowed: false,
+                    branch: formatBranchForCheckout(branch),
+                    customerLocation: {
+                        latitude: String(latitude).trim(),
+                        longitude: String(longitude).trim(),
+                    },
                 });
             }
         }
 
-        // Keep server cart refreshed with validated items
-        if (!cart) {
-            cart = new Cart({
-                merchantId: merchant._id,
-                bussinessId: merchant.bussinessId,
-                customerId: customer._id,
-                currency: merchant.currency || "PKR",
-            });
-        }
-
         const totals = recalculateCartTotals(validated.items);
-        cart.branchId = branch._id;
-        cart.branchName = branch.name;
-        cart.items = validated.items;
-        cart.itemsCount = totals.itemsCount;
-        cart.subtotal = totals.subtotal;
-        cart.taxTotal = totals.taxTotal;
-        cart.grandTotal = totals.grandTotal;
-        cart.currency = merchant.currency || "PKR";
-        await cart.save();
-
         const fee =
             normalizedMode === "delivery"
                 ? roundMoney(Number(deliveryFee) || 0)
                 : 0;
-
+        const discountTotal = 0;
+        const itemsSubtotal = totals.subtotal;
+        const taxTotal = totals.taxTotal;
         const checkoutGrandTotal = roundMoney(
-            totals.subtotal + totals.taxTotal + fee
+            itemsSubtotal + taxTotal + fee - discountTotal
         );
 
-        const orderPayload = {
-            frontendDomainUrl:
-                getFrontendDomainFromRequest(req) || merchant.frontendDomainUrl,
-            branchId: branch._id,
-            branchName: branch.name,
+        const formattedItems = validated.items.map(formatCartItem);
+        const preparedAt = new Date();
+
+        cart.branchId = branch._id;
+        cart.branchName = branch.name;
+        cart.items = validated.items;
+        cart.itemsCount = totals.itemsCount;
+        cart.subtotal = itemsSubtotal;
+        cart.taxTotal = taxTotal;
+        cart.grandTotal = totals.grandTotal;
+        cart.currency = merchant.currency || "PKR";
+        cart.checkout = {
+            isReady: true,
+            orderMode: normalizedMode,
+            paymentMethod: normalizedPayment,
+            selectedArea: area,
             latitude: String(latitude).trim(),
             longitude: String(longitude).trim(),
+            deliveryAddress: String(deliveryAddress || "").trim(),
+            deliveryFee: fee,
+            discountTotal,
+            checkoutGrandTotal,
+            notes: String(notes || "").trim(),
+            preparedAt,
+        };
+
+        await cart.save();
+
+        const customerPayload = {
+            id: customer._id,
+            name: String(customerName || customer.name || "").trim(),
+            email: customer.email || "",
+            countryCode: customer.countryCode || "",
+            contactNumber: String(
+                customerContact || customer.contactNumber || ""
+            ).trim(),
+            gender: customer.gender || "",
+        };
+
+        const fulfillment = {
             orderMode: normalizedMode,
+            isDelivery: normalizedMode === "delivery",
+            isPickup: normalizedMode === "pickup",
+            isDineIn: normalizedMode === "dine_in",
+            paymentMethod: normalizedPayment,
+            isCOD: normalizedPayment === "cod",
             selectedArea: area,
             deliveryAddress: String(deliveryAddress || "").trim(),
             notes: String(notes || "").trim(),
-            paymentMethod: String(paymentMethod || "cod").trim().toLowerCase(),
+            customerLocation: {
+                latitude: String(latitude).trim(),
+                longitude: String(longitude).trim(),
+            },
+            branchLocation: {
+                latitude: branch.latitude || "",
+                longitude: branch.longitude || "",
+                address: branch.address || "",
+            },
+            serviceCoverage: {
+                checked: normalizedMode === "delivery",
+                insideServiceArea: coverage.ok === true,
+                message: coverage.reason || "OK",
+            },
+        };
+
+        const priceSummary = {
+            currency: merchant.currency || "PKR",
+            uniqueItemsCount: validated.items.length,
+            itemsCount: totals.itemsCount,
+            itemsSubtotal,
+            taxTotal,
             deliveryFee: fee,
-            items: validated.items.map((item) => ({
-                productId: item.productId,
-                quantity: item.quantity,
-                variantId: item.variantId || item.variant?.variantId || undefined,
-                addons: (item.addons || []).map((addon) => ({
-                    addonId: addon.addonId,
-                    quantity: addon.quantity,
-                })),
-                notes: item.notes || "",
-            })),
+            discountTotal,
+            grandTotal: checkoutGrandTotal,
+            breakdown: {
+                itemsSubtotal,
+                taxTotal,
+                deliveryFee: fee,
+                discountTotal,
+                payable: checkoutGrandTotal,
+            },
+        };
+
+        const placeOrderPayload = {
+            frontendDomainUrl,
+            useCheckout: true,
         };
 
         return res.status(200).json({
             success: true,
-            message: "Checkout ready. Login verified. You can place order now",
+            message:
+                "Checkout saved successfully. Review details below, then POST /orders with useCheckout:true",
             checkoutAllowed: true,
-            requiresLogin: false,
-            cart: formatCart(cart),
+            nextStep: "place-order",
+            nextApi: "POST /api/restaurant/user/orders",
+            merchant: {
+                id: merchant._id,
+                name: merchant.restaurantName || merchant.name || "",
+                currency: merchant.currency || "PKR",
+                frontendDomainUrl,
+            },
+            customer: customerPayload,
+            branch: formatBranchForCheckout(branch),
+            fulfillment,
+            items: formattedItems,
+            priceSummary,
             checkout: {
-                branchId: branch._id,
-                branchName: branch.name,
+                isReady: true,
+                preparedAt,
                 orderMode: normalizedMode,
+                paymentMethod: normalizedPayment,
                 selectedArea: area,
+                deliveryAddress: String(deliveryAddress || "").trim(),
                 latitude: String(latitude).trim(),
                 longitude: String(longitude).trim(),
-                deliveryAddress: String(deliveryAddress || "").trim(),
+                notes: String(notes || "").trim(),
+                uniqueItemsCount: validated.items.length,
                 itemsCount: totals.itemsCount,
-                subtotal: totals.subtotal,
-                taxTotal: totals.taxTotal,
-                deliveryFee: fee,
-                grandTotal: checkoutGrandTotal,
-                currency: merchant.currency || "PKR",
-                customer: {
-                    id: customer._id,
-                    name: customer.name,
-                    email: customer.email,
-                    contactNumber: customer.contactNumber,
-                    gender: customer.gender || "",
-                },
-                items: validated.items,
+                items: formattedItems,
+                priceSummary,
+                branch: formatBranchForCheckout(branch),
+                customer: customerPayload,
+                fulfillment,
             },
-            // Frontend can send this directly to POST /orders
-            placeOrderPayload: orderPayload,
+            cart: formatCart(cart),
+            placeOrderPayload,
+            // Ready-to-copy test body for next API
+            testPlaceOrderBody: {
+                useCheckout: true,
+            },
         });
     } catch (error) {
         console.error("Checkout error:", error);

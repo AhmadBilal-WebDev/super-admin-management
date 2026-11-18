@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import Order from "../../../../models/restaurantModels/order.js";
+import Cart from "../../../../models/restaurantModels/cart.js";
 import Product from "../../../../models/restaurantModels/product.js";
 import formatOrder from "../../../../utils/restaurantUtils/formatOrder.js";
 import {
@@ -11,11 +12,14 @@ import {
     buildBranchVisibilityFilter,
 } from "../../../../utils/restaurantUtils/catalogScope.js";
 import { isDeliveryInsideBranchServiceArea } from "../../../../utils/restaurantUtils/serviceAreaGeo.js";
+import {
+    buildValidatedCartItems,
+    recalculateCartTotals,
+    roundMoney,
+} from "../../../../utils/restaurantUtils/cartLineBuilder.js";
 
 const ORDER_MODES = ["delivery", "pickup", "dine_in"];
 const PAYMENT_METHODS = ["cod", "card", "wallet", "other"];
-
-const roundMoney = (value) => Math.round((Number(value) || 0) * 100) / 100;
 
 const generateOrderNumber = () => {
     const stamp = Date.now().toString().slice(-8);
@@ -59,6 +63,276 @@ const resolveUnitPrice = (product, variant) => {
     return Number(product.price) || 0;
 };
 
+const clearCartAfterOrder = async (cart) => {
+    if (!cart) return;
+    cart.items = [];
+    cart.itemsCount = 0;
+    cart.subtotal = 0;
+    cart.taxTotal = 0;
+    cart.grandTotal = 0;
+    cart.checkout = {
+        isReady: false,
+        orderMode: "",
+        paymentMethod: "",
+        selectedArea: "",
+        latitude: "",
+        longitude: "",
+        deliveryAddress: "",
+        deliveryFee: 0,
+        discountTotal: 0,
+        checkoutGrandTotal: 0,
+        notes: "",
+        preparedAt: null,
+    };
+    await cart.save();
+};
+
+const createOrderDocument = async ({
+    merchant,
+    customer,
+    branch,
+    orderMode,
+    selectedArea,
+    latitude,
+    longitude,
+    deliveryAddress,
+    notes,
+    paymentMethod,
+    deliveryFee,
+    orderItems,
+    itemsCount,
+    subtotal,
+    taxTotal,
+    discountTotal,
+    grandTotal,
+}) => {
+    let order = null;
+    let attempts = 0;
+
+    while (attempts < 5) {
+        attempts += 1;
+        try {
+            order = await Order.create({
+                merchantId: merchant._id,
+                bussinessId: merchant.bussinessId,
+                customerId: customer._id,
+                orderNumber: generateOrderNumber(),
+                branchId: branch._id,
+                branchName: branch.name,
+                orderMode,
+                selectedArea,
+                latitude: String(latitude).trim(),
+                longitude: String(longitude).trim(),
+                deliveryAddress: String(deliveryAddress || "").trim(),
+                customerSnapshot: {
+                    name: customer.name || "",
+                    email: customer.email || "",
+                    gender: customer.gender || "",
+                    countryCode: customer.countryCode || "",
+                    contactNumber: customer.contactNumber || "",
+                },
+                items: orderItems,
+                itemsCount,
+                subtotal: roundMoney(subtotal),
+                taxTotal: roundMoney(taxTotal),
+                deliveryFee: roundMoney(deliveryFee),
+                discountTotal: roundMoney(discountTotal),
+                grandTotal: roundMoney(grandTotal),
+                currency: merchant.currency || "PKR",
+                notes: String(notes || "").trim(),
+                paymentMethod,
+                paymentStatus: "pending",
+                status: "pending",
+                statusHistory: [
+                    {
+                        status: "pending",
+                        note: "Order placed by customer",
+                        at: new Date(),
+                    },
+                ],
+            });
+            break;
+        } catch (error) {
+            if (error?.code === 11000 && attempts < 5) {
+                continue;
+            }
+            throw error;
+        }
+    }
+
+    return order;
+};
+
+/**
+ * Preferred flow:
+ * 1) POST /cart/sync or cart APIs
+ * 2) POST /checkout  -> saves cart + COD/pickup/delivery details
+ * 3) POST /orders { useCheckout: true }
+ */
+const placeOrderFromCheckout = async ({ merchant, customer, req, res }) => {
+    const cart = await Cart.findOne({
+        merchantId: merchant._id,
+        customerId: customer._id,
+    });
+
+    if (!cart || !Array.isArray(cart.items) || !cart.items.length) {
+        return res.status(400).json({
+            success: false,
+            message: "Cart is empty. Add items and complete checkout first",
+        });
+    }
+
+    if (!cart.checkout || cart.checkout.isReady !== true) {
+        return res.status(400).json({
+            success: false,
+            message:
+                "Checkout not ready. Call POST /checkout first, then place order",
+        });
+    }
+
+    const checkout = cart.checkout;
+    const orderMode = String(checkout.orderMode || "").trim().toLowerCase();
+    const paymentMethod = String(checkout.paymentMethod || "cod")
+        .trim()
+        .toLowerCase();
+
+    if (!ORDER_MODES.includes(orderMode)) {
+        return res.status(400).json({
+            success: false,
+            message: "Saved checkout has invalid orderMode. Checkout again",
+        });
+    }
+
+    if (!PAYMENT_METHODS.includes(paymentMethod)) {
+        return res.status(400).json({
+            success: false,
+            message: "Saved checkout has invalid paymentMethod. Checkout again",
+        });
+    }
+
+    if (!checkout.latitude || !checkout.longitude) {
+        return res.status(400).json({
+            success: false,
+            message: "Saved checkout missing location. Checkout again",
+        });
+    }
+
+    if (orderMode === "delivery" && !String(checkout.selectedArea || "").trim()) {
+        return res.status(400).json({
+            success: false,
+            message: "Saved checkout missing selectedArea. Checkout again",
+        });
+    }
+
+    const sourceItems = cart.items.map((item) => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        variantId: item.variantId || item.variant?.variantId,
+        addons: item.addons,
+        notes: item.notes,
+    }));
+
+    const validated = await buildValidatedCartItems({
+        merchant,
+        branchId: cart.branchId,
+        branchName: cart.branchName,
+        items: sourceItems,
+    });
+
+    if (validated.error) {
+        return res.status(validated.error.status).json({
+            success: false,
+            message: validated.error.message,
+        });
+    }
+
+    const branch = validated.branch;
+
+    if (orderMode === "delivery") {
+        const coverage = isDeliveryInsideBranchServiceArea(
+            branch,
+            checkout.latitude,
+            checkout.longitude
+        );
+
+        if (!coverage.ok) {
+            return res.status(400).json({
+                success: false,
+                message: coverage.reason,
+            });
+        }
+    }
+
+    const totals = recalculateCartTotals(validated.items);
+    const fee = orderMode === "delivery" ? roundMoney(checkout.deliveryFee || 0) : 0;
+    const discountTotal = roundMoney(checkout.discountTotal || 0);
+    const grandTotal = roundMoney(
+        totals.subtotal + totals.taxTotal + fee - discountTotal
+    );
+
+    const orderItems = validated.items.map((item) => ({
+        productId: item.productId,
+        categoryId: item.categoryId || null,
+        name: item.name,
+        sku: item.sku || "",
+        image: item.image || "",
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        basePrice: item.basePrice,
+        discountPrice: item.discountPrice,
+        tax: item.tax,
+        variant: item.variant || {
+            variantId: null,
+            name: "",
+            size: "",
+            portion: "",
+            price: null,
+        },
+        addons: item.addons || [],
+        notes: item.notes || "",
+        lineSubtotal: item.lineSubtotal,
+        lineTax: item.lineTax,
+        lineTotal: item.lineTotal,
+    }));
+
+    const order = await createOrderDocument({
+        merchant,
+        customer,
+        branch,
+        orderMode,
+        selectedArea: String(checkout.selectedArea || "").trim(),
+        latitude: checkout.latitude,
+        longitude: checkout.longitude,
+        deliveryAddress: checkout.deliveryAddress,
+        notes: checkout.notes,
+        paymentMethod,
+        deliveryFee: fee,
+        orderItems,
+        itemsCount: totals.itemsCount,
+        subtotal: totals.subtotal,
+        taxTotal: totals.taxTotal,
+        discountTotal,
+        grandTotal,
+    });
+
+    if (!order) {
+        return res.status(500).json({
+            success: false,
+            message: "Failed to create order number. Please try again",
+        });
+    }
+
+    await clearCartAfterOrder(cart);
+
+    return res.status(201).json({
+        success: true,
+        message: "Order placed successfully from checkout",
+        placedFrom: "checkout",
+        order: formatOrder(order),
+        cartCleared: true,
+    });
+};
+
 const placeOrder = async (req, res) => {
     try {
         const customer = req.customer;
@@ -74,6 +348,14 @@ const placeOrder = async (req, res) => {
                 success: false,
                 message: domainCheck.error.message,
             });
+        }
+
+        const useCheckout =
+            req.body?.useCheckout === true ||
+            String(req.body?.useCheckout || "").toLowerCase() === "true";
+
+        if (useCheckout) {
+            return placeOrderFromCheckout({ merchant, customer, req, res });
         }
 
         const {
@@ -93,7 +375,8 @@ const placeOrder = async (req, res) => {
         if (!branchId && !branchName) {
             return res.status(400).json({
                 success: false,
-                message: "branchId or branchName is required",
+                message:
+                    "Use checkout flow: POST /checkout then POST /orders with useCheckout:true — or send branchId/branchName with items",
             });
         }
 
@@ -151,24 +434,6 @@ const placeOrder = async (req, res) => {
             });
         }
 
-        if (branchId && String(branch._id) !== String(branchId)) {
-            return res.status(400).json({
-                success: false,
-                message: "branchId does not match selected branch",
-            });
-        }
-
-        if (
-            branchName &&
-            String(branch.name).trim().toLowerCase() !==
-                String(branchName).trim().toLowerCase()
-        ) {
-            return res.status(400).json({
-                success: false,
-                message: "branchName does not match selected branch",
-            });
-        }
-
         if (normalizedMode === "delivery") {
             const coverage = isDeliveryInsideBranchServiceArea(
                 branch,
@@ -180,25 +445,6 @@ const placeOrder = async (req, res) => {
                 return res.status(400).json({
                     success: false,
                     message: coverage.reason,
-                });
-            }
-        }
-
-        const productIds = [
-            ...new Set(
-                items
-                    .map((item) => String(item?.productId || "").trim())
-                    .filter(Boolean)
-            ),
-        ];
-
-        if (!productIds.length || productIds.length !== items.length) {
-            // allow duplicate products in cart — only validate each has productId
-            const missing = items.find((item) => !item?.productId);
-            if (missing) {
-                return res.status(400).json({
-                    success: false,
-                    message: "Each item needs a valid productId",
                 });
             }
         }
@@ -424,65 +670,28 @@ const placeOrder = async (req, res) => {
             normalizedMode === "delivery"
                 ? roundMoney(Number(deliveryFee) || 0)
                 : 0;
-
         const discountTotal = 0;
-        const grandTotal = roundMoney(
-            subtotal + taxTotal + fee - discountTotal
-        );
+        const grandTotal = roundMoney(subtotal + taxTotal + fee - discountTotal);
 
-        let order;
-        let attempts = 0;
-
-        while (attempts < 5) {
-            attempts += 1;
-            try {
-                order = await Order.create({
-                    merchantId: merchant._id,
-                    bussinessId: merchant.bussinessId,
-                    customerId: customer._id,
-                    orderNumber: generateOrderNumber(),
-                    branchId: branch._id,
-                    branchName: branch.name,
-                    orderMode: normalizedMode,
-                    selectedArea: area,
-                    latitude: String(latitude).trim(),
-                    longitude: String(longitude).trim(),
-                    deliveryAddress: String(deliveryAddress || "").trim(),
-                    customerSnapshot: {
-                        name: customer.name || "",
-                        email: customer.email || "",
-                        gender: customer.gender || "",
-                        countryCode: customer.countryCode || "",
-                        contactNumber: customer.contactNumber || "",
-                    },
-                    items: orderItems,
-                    itemsCount,
-                    subtotal: roundMoney(subtotal),
-                    taxTotal: roundMoney(taxTotal),
-                    deliveryFee: fee,
-                    discountTotal,
-                    grandTotal,
-                    currency: merchant.currency || "PKR",
-                    notes: String(notes || "").trim(),
-                    paymentMethod: normalizedPayment,
-                    paymentStatus: "pending",
-                    status: "pending",
-                    statusHistory: [
-                        {
-                            status: "pending",
-                            note: "Order placed by customer",
-                            at: new Date(),
-                        },
-                    ],
-                });
-                break;
-            } catch (error) {
-                if (error?.code === 11000 && attempts < 5) {
-                    continue;
-                }
-                throw error;
-            }
-        }
+        const order = await createOrderDocument({
+            merchant,
+            customer,
+            branch,
+            orderMode: normalizedMode,
+            selectedArea: area,
+            latitude,
+            longitude,
+            deliveryAddress,
+            notes,
+            paymentMethod: normalizedPayment,
+            deliveryFee: fee,
+            orderItems,
+            itemsCount,
+            subtotal,
+            taxTotal,
+            discountTotal,
+            grandTotal,
+        });
 
         if (!order) {
             return res.status(500).json({
@@ -491,10 +700,20 @@ const placeOrder = async (req, res) => {
             });
         }
 
+        const cart = await Cart.findOne({
+            merchantId: merchant._id,
+            customerId: customer._id,
+        });
+        if (cart) {
+            await clearCartAfterOrder(cart);
+        }
+
         return res.status(201).json({
             success: true,
             message: "Order placed successfully",
+            placedFrom: "direct",
             order: formatOrder(order),
+            cartCleared: Boolean(cart),
         });
     } catch (error) {
         console.error("Place order error:", error);

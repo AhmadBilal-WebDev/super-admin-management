@@ -19,6 +19,21 @@ const formatCartItem = (item) => ({
     lineTotal: item.lineTotal ?? 0,
 });
 
+const formatCheckout = (checkout = {}) => ({
+    isReady: checkout.isReady === true,
+    orderMode: checkout.orderMode || "",
+    paymentMethod: checkout.paymentMethod || "",
+    selectedArea: checkout.selectedArea || "",
+    latitude: checkout.latitude || "",
+    longitude: checkout.longitude || "",
+    deliveryAddress: checkout.deliveryAddress || "",
+    deliveryFee: checkout.deliveryFee ?? 0,
+    discountTotal: checkout.discountTotal ?? 0,
+    checkoutGrandTotal: checkout.checkoutGrandTotal ?? 0,
+    notes: checkout.notes || "",
+    preparedAt: checkout.preparedAt || null,
+});
+
 const formatCart = (cart) => ({
     id: cart._id,
     merchantId: cart.merchantId,
@@ -26,14 +41,16 @@ const formatCart = (cart) => ({
     branchId: cart.branchId || null,
     branchName: cart.branchName || "",
     items: (cart.items || []).map(formatCartItem),
+    uniqueItemsCount: Array.isArray(cart.items) ? cart.items.length : 0,
     itemsCount: cart.itemsCount ?? 0,
     subtotal: cart.subtotal ?? 0,
     taxTotal: cart.taxTotal ?? 0,
     grandTotal: cart.grandTotal ?? 0,
     currency: cart.currency || "PKR",
+    checkout: formatCheckout(cart.checkout || {}),
     updatedAt: cart.updatedAt,
     createdAt: cart.createdAt,
 });
 
-export { formatCartItem, formatCart };
+export { formatCartItem, formatCheckout, formatCart };
 export default formatCart;
