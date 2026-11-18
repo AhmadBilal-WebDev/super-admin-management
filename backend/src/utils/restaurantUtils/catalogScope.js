@@ -312,10 +312,21 @@ const buildBranchVisibilityFilter = ({ merchantId, branch, showAllOnly }) => {
         return filter;
     }
 
-    // Specific branch → public + that branch only
+    const branchName = String(branch.name || "").trim();
+    const escapedName = branchName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+    // Specific branch → all-branch items + this branch only
     filter.$or = [
         { showAllBranches: true },
         { showAllBranches: false, branchId: branch._id },
+        ...(branchName
+            ? [
+                  {
+                      showAllBranches: false,
+                      branchName: new RegExp(`^${escapedName}$`, "i"),
+                  },
+              ]
+            : []),
     ];
     return filter;
 };
