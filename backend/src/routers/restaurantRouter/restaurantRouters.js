@@ -45,6 +45,10 @@ import getDeals from "../../controllers/restaurantController/deals/getDeals.js";
 import getPublicDeals from "../../controllers/restaurantController/deals/getPublicDeals.js";
 import updateDeal from "../../controllers/restaurantController/deals/updateDeal.js";
 import deleteDeal from "../../controllers/restaurantController/deals/deleteDeal.js";
+import getOwnerOrders from "../../controllers/restaurantController/owner/orders/getOwnerOrders.js";
+import getOwnerNotifications from "../../controllers/restaurantController/owner/notifications/getOwnerNotifications.js";
+import markNotificationRead from "../../controllers/restaurantController/owner/notifications/markNotificationRead.js";
+import markAllNotificationsRead from "../../controllers/restaurantController/owner/notifications/markAllNotificationsRead.js";
 
 const router = express.Router();
 
@@ -171,5 +175,21 @@ router.get("/deals", restaurantAuthMiddleware, getDeals);
 router.post("/deals", restaurantAuthMiddleware, addNewDeals);
 router.put("/deals/:id", restaurantAuthMiddleware, updateDeal);
 router.delete("/deals/:id", restaurantAuthMiddleware, deleteDeal);
+
+// Orders — owner dashboard (customer orders)
+router.get("/orders", restaurantAuthMiddleware, getOwnerOrders);
+
+// Bell notifications — owner dashboard (web + mobile)
+router.get("/notifications", restaurantAuthMiddleware, getOwnerNotifications);
+router.put(
+    "/notifications/read-all",
+    restaurantAuthMiddleware,
+    markAllNotificationsRead
+);
+router.put(
+    "/notifications/:notificationId/read",
+    restaurantAuthMiddleware,
+    markNotificationRead
+);
 
 export default router;

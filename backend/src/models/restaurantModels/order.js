@@ -128,6 +128,12 @@ const orderSchema = new mongoose.Schema(
             gender: { type: String, default: "", trim: true },
             countryCode: { type: String, default: "", trim: true },
             contactNumber: { type: String, default: "", trim: true },
+            profilePitcher: { type: String, default: "", trim: true },
+            branchId: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "branch",
+                default: null,
+            },
         },
         items: {
             type: [orderItemSchema],

@@ -17,6 +17,7 @@ import {
     recalculateCartTotals,
     roundMoney,
 } from "../../../../utils/restaurantUtils/cartLineBuilder.js";
+import notifyOwnerNewOrder from "../../../../utils/restaurantUtils/notifyOwnerNewOrder.js";
 
 const ORDER_MODES = ["delivery", "pickup", "dine_in"];
 const PAYMENT_METHODS = ["cod", "card", "wallet", "other"];
@@ -130,6 +131,8 @@ const createOrderDocument = async ({
                     gender: customer.gender || "",
                     countryCode: customer.countryCode || "",
                     contactNumber: customer.contactNumber || "",
+                    profilePitcher: customer.profilePitcher || "",
+                    branchId: customer.branchId || null,
                 },
                 items: orderItems,
                 itemsCount,
@@ -323,12 +326,13 @@ const placeOrderFromCheckout = async ({ merchant, customer, req, res }) => {
     }
 
     await clearCartAfterOrder(cart);
+    await notifyOwnerNewOrder({ order, customer });
 
     return res.status(201).json({
         success: true,
         message: "Order placed successfully from checkout",
         placedFrom: "checkout",
-        order: formatOrder(order),
+        order: formatOrder(order, customer),
         cartCleared: true,
     });
 };
@@ -708,11 +712,13 @@ const placeOrder = async (req, res) => {
             await clearCartAfterOrder(cart);
         }
 
+        await notifyOwnerNewOrder({ order, customer });
+
         return res.status(201).json({
             success: true,
             message: "Order placed successfully",
             placedFrom: "direct",
-            order: formatOrder(order),
+            order: formatOrder(order, customer),
             cartCleared: Boolean(cart),
         });
     } catch (error) {
